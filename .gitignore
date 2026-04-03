@@ -1,0 +1,25 @@
+# Data and logs
+logs/
+data/
+output/
+outputs/
+archive/
+archive_legacy/
+archive_logs/
+hmr2_training_data/
+
+# Checkpoints and models
+external_models/
+*.ckpt
+*.pth
+*.pt
+*.pkl
+*.npy
+
+# Cache and miscellaneous
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+nohup.out
+*.log
+.agents/

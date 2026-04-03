@@ -1,0 +1,3 @@
+timestamp,checkpoint_path,exp_name,dataset,metric_name,metric_value,error,iters_done
+2026-01-08 21:33:50.436788,/home/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt,masked_hard_l16,3DPW-TEST,mode_re,,RuntimeError('The size of tensor a (192) must match the size of tensor b (170) at non-singleton dimension 3'),0
+2026-01-08 21:33:50.436788,/home/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt,masked_hard_l16,3DPW-TEST,mode_mpjpe,,RuntimeError('The size of tensor a (192) must match the size of tensor b (170) at non-singleton dimension 3'),0

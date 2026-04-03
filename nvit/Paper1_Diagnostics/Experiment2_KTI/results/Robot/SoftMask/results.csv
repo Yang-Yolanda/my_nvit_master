@@ -1,0 +1,4 @@
+Group,MPJPE,Avg_Entropy,Avg_KTI,Avg_Rank,Mask_Type,Mask_Layers,Hybrid_Config
+SoftMask,0.0,3.632271,1.0,14.620712,soft,"[0, 1, 2, 3, 4, 5]",{}
+SoftMask,0.0,3.6292198,1.0,15.269745,soft,"[0, 1, 2, 3, 4, 5]",{}
+SoftMask,0.0,3.627219,0.0,15.526924,soft,"[0, 1, 2, 3, 4, 5]",{}

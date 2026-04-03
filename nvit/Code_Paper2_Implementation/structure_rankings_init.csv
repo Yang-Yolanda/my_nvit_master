@@ -1,0 +1,9 @@
+Mamba,GCN,FPS,MPJPE
+positive,skeleton,55.92,473.57
+bidirectional,grid,50.43,480.09
+positive,grid,48.43,487.86
+inverse,grid,42.97,513.58
+bidirectional,skeleton,55.57,509.62
+sequential,grid,55.53,522.29
+sequential,skeleton,50.49,543.48
+inverse,skeleton,42.48,617.31

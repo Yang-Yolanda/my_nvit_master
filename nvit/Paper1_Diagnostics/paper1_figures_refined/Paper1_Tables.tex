@@ -1,0 +1,52 @@
+% --- Ablation Results ---
+\begin{table}[h]
+\centering
+\caption{Ablation Study of Masking Strategies on 3DPW Test Set. $\downarrow$ indicates lower is better.}
+\label{tab:ablation_results}
+\begin{tabular}{lcc}
+\toprule
+Strategy & MPJPE (mm) $\downarrow$ & PA-MPJPE (mm) $\downarrow$ \\
+\midrule
+\textbf{Control} & 87.79 & 58.73 \\
+T2-Static-Late & 87.69 & 57.69 \\
+T2-Static-Mid & 85.61 & 56.8 \\
+T2-A-S-Baseline & 85.58 & 57.86 \\
+T2-KTI-Adaptive & 85.76 & 57.15 \\
+\textit{T2-A-H-Baseline} (Best) & 84.7 & 56.62 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% --- Table 5-3: Mask Config ---
+\begin{table}[htbp]
+\centering
+\caption{各实验组掩码配置清单 (Table 5-3: Mask Config)}
+\label{tab:mask_config}
+\begin{tabular}{l|ccccc}
+\toprule
+实验 ID & 掩码策略 & $L_{start}$ & 约束形式 & 拓扑先验 & 混合切换规则 \\
+\midrule
+Exp0 & Control & 无 & 无 & 无 & - \\
+Exp1 & Static-Mid & 16 & 硬划分 (Hard) & 骨架邻接 & - \\
+Exp2 & Static-Late & 24 & 硬划分 (Hard) & 骨架邻接 & - \\
+Exp3 & Soft-Split & 8 & 软划分 (Soft) & 测地距离 & - \\
+Exp4 & Hard-Split & 8 & 硬划分 (Hard) & 骨架邻接 & - \\
+Exp5 & KTI-Adaptive & 8 & 混合 (Hybrid) & KTI 引导 & Soft ($L \le 10$), Hard ($L \ge 11$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% --- Robustness Results ---
+\begin{table}[h]
+\centering
+\caption{Robustness Analysis: MPJPE (mm) under Systematic Patch Occlusion.}
+\label{tab:robustness_results}
+\begin{tabular}{lccc}
+\toprule
+Method & Occ=0.1 & Occ=0.2 & Occ=0.3 \\
+\midrule
+Control & 88.2 & 89.54 & 92.36 \\
+\textbf{Ours} & 86.29 & 88.16 & 91.89 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,2 @@
+Group,MPJPE,Avg_Entropy,Avg_KTI,Avg_Rank,Mask_Type,Mask_Layers,Hybrid_Config
+T2-A-S-Baseline,130.50001861572267,2.7869658,0.026023291728561163,107.936005,soft,"[8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]",{}

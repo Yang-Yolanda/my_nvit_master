@@ -1,0 +1,5 @@
+Model,MPJPE (mm),PA-MPJPE (mm),PCK@50mm (%),AUC (%)
+HMR2,68.4,47.5,100.0,66.7
+PromptHMR,nan,nan,0.0,0.0
+CameraHMR,nan,nan,0.0,0.0
+HSMR,nan,nan,0.0,0.0

@@ -1,0 +1,15 @@
+MODEL:
+  BACKBONE:
+    gcn_variant: grid
+    mamba_variant: spiral
+    switch_layer_1: 6
+    switch_layer_2: 9
+metadata:
+  kmi_values:
+  - 0.06614790484309196
+  - 0.07085203751921654
+  peak_layers:
+  - 5
+  - 8
+  peaks_detected: 2
+  source: KTI Peak Detection

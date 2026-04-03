@@ -1,0 +1,2 @@
+Group,MPJPE,Avg_Entropy,Avg_KTI,Avg_Rank,Mask_Type,Mask_Layers,Hybrid_Config
+T2-Static-Mid,138.09672912597657,1.7468452,0.02685309350643365,109.55554,hard,"[16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]",{}

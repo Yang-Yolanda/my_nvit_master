@@ -1,0 +1,4 @@
+Group,MPJPE,Avg_Entropy,Avg_KTI,Avg_Rank,Mask_Type,Mask_Layers,Hybrid_Config
+Hybrid,0.0,2.1648607,1.0,15.058734,hybrid,"[0, 1, 2, 3, 4, 5]","{0: 'soft', 1: 'soft', 2: 'soft', 3: 'hard', 4: 'hard', 5: 'hard'}"
+Hybrid,0.0,2.1630056,1.0,15.309586,hybrid,"[0, 1, 2, 3, 4, 5]","{0: 'soft', 1: 'soft', 2: 'soft', 3: 'hard', 4: 'hard', 5: 'hard'}"
+Hybrid,0.0,2.1610525,1.0,15.095311,hybrid,"[0, 1, 2, 3, 4, 5]","{0: 'soft', 1: 'soft', 2: 'soft', 3: 'hard', 4: 'hard', 5: 'hard'}"

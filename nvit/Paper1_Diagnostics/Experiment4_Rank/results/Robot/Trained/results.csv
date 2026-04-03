@@ -1,0 +1,5 @@
+Group,MPJPE,Avg_Entropy,Avg_KTI,Avg_Rank,Mask_Type,Mask_Layers,Hybrid_Config
+Trained,0.0,5.5200233,1.0,14.004108,none,[],{}
+Trained,0.0,5.518366,0.9852549235026041,13.885177,none,[],{}
+Trained,0.0,5.518461,1.0,14.3279,none,[],{}
+Trained,0.0,5.520971,1.0,13.482129,none,[],{}

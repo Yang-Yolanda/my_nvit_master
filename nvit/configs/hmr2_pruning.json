@@ -1,0 +1,1395 @@
+{
+  "Global": 5120,
+  "backbone.blocks.0.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.0.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.0.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.0.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.1.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.1.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.1.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.1.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.2.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.2.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.2.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.2.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.3.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.3.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.3.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.3.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.4.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.4.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.4.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.4.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.5.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.5.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.5.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.5.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.6.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.6.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.6.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.6.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.7.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.7.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.7.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.7.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.8.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.8.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.8.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.8.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.9.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.9.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.9.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.9.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.10.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.10.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.10.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.10.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.11.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.11.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.11.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.11.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.12.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.12.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.12.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.12.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.13.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.13.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.13.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.13.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.14.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.14.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.14.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.14.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.15.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.15.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.15.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.15.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.16.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.16.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.16.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.16.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.17.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.17.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.17.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.17.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.18.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.18.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.18.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.18.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.19.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.19.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.19.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.19.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.20.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.20.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.20.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.20.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.21.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.21.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.21.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.21.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.22.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.22.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.22.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.22.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.23.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.23.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.23.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.23.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.24.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.24.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.24.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.24.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.25.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.25.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.25.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.25.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.26.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.26.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.26.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.26.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.27.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.27.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.27.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.27.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.28.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.28.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.28.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.28.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.29.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.29.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.29.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.29.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.30.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.30.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.30.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.30.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.31.attn.qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.31.attn.proj": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.31.mlp.fc1": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "backbone.blocks.31.mlp.fc2": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.to_token_embedding": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.0.0.fn.to_qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.0.0.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.0.1.fn.to_kv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.0.1.fn.to_q": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.0.1.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.0.2.fn.net.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.0.2.fn.net.3": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.1.0.fn.to_qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.1.0.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.1.1.fn.to_kv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.1.1.fn.to_q": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.1.1.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.1.2.fn.net.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.1.2.fn.net.3": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.2.0.fn.to_qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.2.0.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.2.1.fn.to_kv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.2.1.fn.to_q": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.2.1.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.2.2.fn.net.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.2.2.fn.net.3": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.3.0.fn.to_qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.3.0.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.3.1.fn.to_kv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.3.1.fn.to_q": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.3.1.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.3.2.fn.net.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.3.2.fn.net.3": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.4.0.fn.to_qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.4.0.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.4.1.fn.to_kv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.4.1.fn.to_q": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.4.1.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.4.2.fn.net.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.4.2.fn.net.3": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.5.0.fn.to_qkv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.5.0.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.5.1.fn.to_kv": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.5.1.fn.to_q": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.5.1.fn.to_out.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.5.2.fn.net.0": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.transformer.transformer.layers.5.2.fn.net.3": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.decpose": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.decshape": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  },
+  "smpl_head.deccam": {
+      "compute_criteria_from": [
+          {
+              "parameter": "weight",
+              "type": "linear"
+          }
+      ]
+  }
+}

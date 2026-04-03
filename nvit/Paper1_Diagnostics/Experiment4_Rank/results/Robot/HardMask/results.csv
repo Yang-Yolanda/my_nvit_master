@@ -1,0 +1,4 @@
+Group,MPJPE,Avg_Entropy,Avg_KTI,Avg_Rank,Mask_Type,Mask_Layers,Hybrid_Config
+HardMask,0.0,0.7004308,1.0,16.175735,hard,"[0, 1, 2, 3, 4, 5]",{}
+HardMask,0.0,0.700257,1.0,16.632477,hard,"[0, 1, 2, 3, 4, 5]",{}
+HardMask,0.0,0.6999195,1.0,16.406801,hard,"[0, 1, 2, 3, 4, 5]",{}

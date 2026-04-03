@@ -1,0 +1,7 @@
+KTI Validation Report
+============================================================
+
+Passed: 3
+Warnings: 0
+Errors: 0
+
