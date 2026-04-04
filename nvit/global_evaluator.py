@@ -65,12 +65,29 @@ def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL"):
     skill.run_eval(args)
     return args.output
 
-def run_diagnostics(ckpt_path, output_dir, gpu="0", num_batches=20):
-    """Runs the 4 key diagnostic metrics on 3DPW"""
-    logger.info(f"🔬 Starting 4-Metric Scientific Diagnostics...")
+def run_diagnostics(ckpt_path, output_dir, gpu="0", num_batches=10, chapter="Ch4"):
+    logger.info(f"🔬 Starting 4-Metric Scientific Diagnostics for Chapter [{chapter}]...")
     
     device = torch.device(f'cuda:{gpu}')
-    model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
+    
+    # Intelligently detect architecture from checkpoint instead of hardcoding by Chapter!
+    try:
+        checkpoint = torch.load(ckpt_path, map_location='cpu')
+        state_dict = checkpoint.get('state_dict', checkpoint)
+        decpose_weight = state_dict.get('smpl_head.decpose.weight')
+        if decpose_weight is not None and decpose_weight.shape[0] == 144:
+            from hmr2.models.hmr2 import HMR2
+            model = HMR2.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
+            logger.info("Detected Legacy [144] SMPLHead in checkpoint. Loaded standard HMR2.")
+        else:
+            from nvit2_models.guided_hmr2 import GuidedHMR2Module
+            model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
+            logger.info("Detected Guided [6] SMPLHead in checkpoint. Loaded GuidedHMR2Module.")
+    except Exception as e:
+        logger.warning(f"Inspection failed, defaulting to GuidedHMR2Module: {e}")
+        from nvit2_models.guided_hmr2 import GuidedHMR2Module
+        model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
+        
     model.to(device)
     model.eval()
     
@@ -160,7 +177,8 @@ def main():
     parser.add_argument("--datasets", type=str, default="ALL", help="Comma-separated list of datasets or ALL")
     args = parser.parse_args()
 
-    run_name = os.path.basename(args.run_path)
+    # Fix trailing slash bug causing empty run_name
+    run_name = os.path.basename(os.path.normpath(args.run_path))
     output_root = BASE_DIR / "outputs" / "eval_global" / args.chapter / run_name
     output_root.mkdir(parents=True, exist_ok=True)
 
@@ -184,10 +202,15 @@ def main():
     # 3. Diagnostic Metrics (Ch6B might skip if non-human)
     diag_dir = None
     if args.chapter != 'Ch6B':
-        diag_dir = run_diagnostics(ckpt_path, output_root, gpu=args.gpu, num_batches=args.diag_batches)
+        diag_dir = run_diagnostics(ckpt_path, output_root, gpu=args.gpu, num_batches=args.diag_batches, chapter=args.chapter)
 
     # 4. Final Aggregation
     summarize_results(args.chapter, run_name, suite_json, diag_dir, BASE_DIR / "outputs" / "eval_global" / args.chapter)
+    
+    # 5. Layer-Wise Diagnostic Plotting (NViT Auto-Gen)
+    from nvit.skills.evaluate_model.layer_plotter import generate_comparative_plots
+    generate_comparative_plots(args.chapter, BASE_DIR / "outputs" / "eval_global")
+    logger.info(f"✨ Workflow Finalized. Layer Comparison visuals generated for {args.chapter}.")
 
 if __name__ == "__main__":
     main()

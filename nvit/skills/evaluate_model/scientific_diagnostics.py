@@ -624,6 +624,7 @@ class ViTDiagnosticLab:
            M_ij = exp( -dist(Joint_a, Joint_b)^2 / sigma^2 )
         3. Score = CosineSimilarity(Attn, M)
         """
+        import math
         B, H, N, _ = attn_map.shape
         device = attn_map.device
         sigma = 2.0 # Standard width
@@ -1071,18 +1072,38 @@ class ViTDiagnosticLab:
         
         if hasattr(backbone, 'blocks'):
             for i, blk in enumerate(backbone.blocks):
-                # 1. Hook Features (Output of Block) for Effective Rank
-                # We need a closure to capture 'i'
-                def make_feat_hook(idx):
+                # 1. Hook Features (Output of Block) for Effective Rank and Mamba Pseudo-Attention
+                # We need a closure to capture 'i' and whether it has 'attn'
+                has_attn_attr = hasattr(blk, 'attn')
+                
+                def make_feat_hook(idx, has_attn):
                     def feat_hook(module, input, output):
                         # output is (x) [B, N, D]
                         if not self.model.training:
-                            # detach to save memory?
-                            er = self.calculate_effective_rank(output.detach())
+                            features = output.detach()
+                            er = self.calculate_effective_rank(features)
                             self.layer_metrics[idx]['rank'].append(er)
+                            
+                            # If no standard attention (Mamba/GCN), compute Token Affinity Pseudo-Attention
+                            if not has_attn:
+                                import math
+                                B, N, D = features.shape
+                                # Token Affinity = Softmax(X @ X^T / sqrt(D))
+                                sim = torch.bmm(features, features.transpose(1, 2)) / math.sqrt(D)
+                                pseudo_attn = torch.nn.functional.softmax(sim, dim=-1) # (B, N, N)
+                                pseudo_attn_h = pseudo_attn.unsqueeze(1) # (B, 1, N, N)
+                                
+                                # Entropy
+                                e = self.calculate_entropy(pseudo_attn_h)
+                                self.layer_metrics[idx]['entropy'].append(e)
+                                
+                                # KTI (Topology)
+                                k = self.calculate_kti(pseudo_attn_h, self.smpl_adj, reduce="none")
+                                self.layer_metrics[idx]['kmi'].append(k)
+                                
                     return feat_hook
                 
-                blk.register_forward_hook(make_feat_hook(i))
+                blk.register_forward_hook(make_feat_hook(i, has_attn_attr))
                 
                 # 2. Patch Attention (Monkey Patch) for Entropy/KTI/Mask
                 if hasattr(blk, 'attn'):
