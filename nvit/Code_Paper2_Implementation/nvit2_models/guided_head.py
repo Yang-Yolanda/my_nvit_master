@@ -79,6 +79,9 @@ class PositionalEncoding2D(nn.Module):
         # Concatenate: (B, N, channels)
         pos_embed = torch.cat([sin_x, cos_x, sin_y, cos_y], dim=-1)
         
+        if not torch.isfinite(pos_embed).all():
+             print(f"DEBUG: Found non-finite values in PositionalEncoding2D output. Coords max: {coords.max()}, min: {coords.min()}")
+        
         return pos_embed
 
 class GuidedSMPLHead(nn.Module):
@@ -205,100 +208,6 @@ class GuidedSMPLHead(nn.Module):
         # HMR2 convention:
         # global_orient: (B, 1, 3, 3) -> Joint 0 (Pelvis)
         # body_pose: (B, 23, 3, 3) -> Joints 1-23
-        return {
-            'global_orient': pred_pose_rotmat[:, 0:1],
-            'body_pose': pred_pose_rotmat[:, 1:],
-            'betas': pred_shape
-        }, pred_cam, None
-
-class AnatomicalSMPLHead(nn.Module):
-    """
-    Stage 2 & 3 of the Three-Stage NViT Architecture.
-    Replaces the heavy TransformerDecoder with 5-Branch Anatomical Scan Mamba + Skeleton GCN.
-    """
-    def __init__(self, cfg):
-        super().__init__()
-        self.cfg = cfg
-        self.dim = 1024 
-        self.num_joints = 24 
-        
-        # 1. Coordinate Positional Guidance (Optional)
-        self.joint_proj = nn.Sequential(
-            nn.Linear(1280, self.dim),
-            nn.LayerNorm(self.dim)
-        )
-        self.pe_2d = PositionalEncoding2D(self.dim // 4)
-        self.coord_encoder = nn.Sequential(
-            nn.Linear(self.dim // 4, self.dim // 2),
-            nn.GELU(),
-            nn.Linear(self.dim // 2, self.dim)
-        )
-        self.guidance_scale = nn.Parameter(torch.ones(1) * 0.1)
-
-        # 2. Stage 2.2: Five-Branch Anatomical Mamba (Depth=3)
-        from nvit2_models.mamba_utils import AnatomicalScanMamba
-        self.mamba_blocks = nn.ModuleList([
-            AnatomicalScanMamba(dim=self.dim, variant='kinetic_bi') for _ in range(3)
-        ])
-
-        # 3. Stage 3: Structural Locking (Skeleton GCN)
-        from nvit2_models.nvit_hybrid import GridGCNBlock
-        from smpl_topology import get_smpl_adjacency_matrix
-        adj = get_smpl_adjacency_matrix(mode='undirected', add_self_loops=True)
-        self.locking_gcn = GridGCNBlock(dim=self.dim, num_nodes=self.num_joints, adj=adj, has_cls=False)
-
-        # 4. Parameter Regressors
-        self.decpose = nn.Linear(self.dim, 6) # Per joint rotation
-        self.decshape = nn.Linear(self.dim, 10)
-        self.deccam = nn.Linear(self.dim, 3)
-
-        self._init_weights()
-
-    def _init_weights(self):
-        # Prevent initial gradient explosion by outputting identity pose
-        nn.init.normal_(self.decpose.weight, std=0.001)
-        identity_6d = torch.tensor([1.0, 0.0, 0.0, 0.0, 1.0, 0.0], dtype=torch.float32)
-        nn.init.constant_(self.decpose.bias, 0)
-        self.decpose.bias.data[:] = identity_6d
-
-        nn.init.normal_(self.decshape.weight, std=0.001)
-        nn.init.constant_(self.decshape.bias, 0)
-
-        nn.init.normal_(self.deccam.weight, std=0.001)
-        nn.init.constant_(self.deccam.bias, 0)
-        with torch.no_grad():
-            self.deccam.bias[0] = 1.0 # Set scale s=1.0
-            
-    def forward(self, x_joints, coords):
-        """
-        x_joints: (B, 24, 1280) - Direct joint features extracted via KTI
-        coords: (B, 24, 2) in [-1, 1]
-        """
-        B = x_joints.shape[0]
-
-        # 1. Inject Positional Guidance
-        x = self.joint_proj(x_joints) # (B, 24, 1024)
-        pe = self.pe_2d(coords) # (B, 24, self.dim // 4)
-        pos_embed = self.coord_encoder(pe) # (B, 24, 1024)
-        x = x + self.guidance_scale * pos_embed
-
-        # 2. Stage 2.2: Anatomical Sequential Scanning
-        for mamba in self.mamba_blocks:
-            x = mamba(x)
-            
-        # 3. Stage 3: Global Structural Locking
-        out = self.locking_gcn(x) # (B, 24, 1024)
-
-        # 4. Regress Parameters
-        pred_pose_6d = self.decpose(out) # (B, 24, 6)
-        
-        global_feat = out.mean(dim=1) # (B, 1024)
-        pred_shape = self.decshape(global_feat)
-        pred_cam = self.deccam(global_feat)
-        
-        # 5. Format Output
-        pred_pose_rotmat = rot6d_to_rotmat(pred_pose_6d.reshape(-1, 6)).reshape(B, 24, 3, 3)
-        
         return {
             'global_orient': pred_pose_rotmat[:, 0:1],
             'body_pose': pred_pose_rotmat[:, 1:],

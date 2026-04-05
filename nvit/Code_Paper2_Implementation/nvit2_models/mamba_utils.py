@@ -88,41 +88,20 @@ class PatchScanMamba(nn.Module):
         # 1. Grid Dimensions
         H = img_size[0] // patch_size
         W = img_size[1] // patch_size
+        N = H * W
         
-        # 2. Setup standard 2D grid of indices
-        matrix_idx = torch.arange(H * W).view(H, W).numpy()
-        spiral_list = []
+        # 2. Coordinates
+        y, x = torch.meshgrid(torch.arange(H), torch.arange(W), indexing='ij')
+        # Center coords
+        cy, cx = (H-1)/2.0, (W-1)/2.0
         
-        top, bottom = 0, H - 1
-        left, right = 0, W - 1
+        # 3. Distance from Center
+        dist = (y - cy)**2 + (x - cx)**2
+        dist_flat = dist.flatten()
         
-        # 3. Wind inwards (Standard Spiral Matrix Traversal: Outside -> Inside)
-        while top <= bottom and left <= right:
-            # Traverse Top boundary (Left to Right)
-            for i in range(left, right + 1):
-                spiral_list.append(matrix_idx[top][i])
-            top += 1
-            
-            # Traverse Right boundary (Top to Bottom)
-            for i in range(top, bottom + 1):
-                spiral_list.append(matrix_idx[i][right])
-            right -= 1
-            
-            if top <= bottom:
-                # Traverse Bottom boundary (Right to Left)
-                for i in range(right, left - 1, -1):
-                    spiral_list.append(matrix_idx[bottom][i])
-                bottom -= 1
-                
-            if left <= right:
-                # Traverse Left boundary (Bottom to Top)
-                for i in range(bottom, top - 1, -1):
-                    spiral_list.append(matrix_idx[i][left])
-                left += 1
-                
-        # 4. Reverse the list so it unwinds: Center -> Periphery
-        spiral_list.reverse()
-        return torch.tensor(spiral_list, dtype=torch.long)
+        # 4. Sort by distance (Center -> Periphery)
+        indices = torch.argsort(dist_flat)
+        return indices
         
     def forward(self, x):
         # x: (B, T, D). T = N or N+1 (CLS)

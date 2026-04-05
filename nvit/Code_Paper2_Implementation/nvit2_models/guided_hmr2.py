@@ -47,7 +47,7 @@ class GuidedHMR2Module(HMR2):
         gcn_variant = cfg.MODEL.BACKBONE.get('GCN_VARIANT', cfg.MODEL.BACKBONE.get('gcn_variant', 'guided'))
         
         # [Ablation Support] Make depth, switch layers configurable
-        depth = cfg.MODEL.BACKBONE.get('depth', 8) # Force 8 to leave room for the 4 Kineto-Head blocks
+        depth = cfg.MODEL.BACKBONE.get('depth', 11) # Default to target 11
         sl1 = cfg.MODEL.BACKBONE.get('switch_layer_1', 8)
         sl2 = cfg.MODEL.BACKBONE.get('switch_layer_2', 11)
         
@@ -94,9 +94,8 @@ class GuidedHMR2Module(HMR2):
             if cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER.get('mlp_dim', 1024) == 1024:
                 cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER.mlp_dim = 1024
              
-        # 2. Overwrite Head: AnatomicalSMPLHead (Three-Stage Architecture)
-        from nvit2_models.guided_head import AnatomicalSMPLHead
-        self.smpl_head = AnatomicalSMPLHead(cfg)
+        # 2. Overwrite Head: GuidedSMPLHead
+        self.smpl_head = GuidedSMPLHead(cfg)
         
         # 3. Add Heatmap Loss logic
         # We need a dedicated Heatmap Loss (MSE)

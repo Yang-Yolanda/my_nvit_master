@@ -171,8 +171,7 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     cfg.trainer.log_every_n_steps = cfg.GENERAL.LOG_STEPS
 
     # Setup model (Using Guided HMR2)
-    # Rendering disabled to completely bypass tensorboard rendering overhead and save GPU VRAM
-    model = GuidedHMR2Module(cfg, init_renderer=False)
+    model = GuidedHMR2Module(cfg)
     
     # [NEW: Trainable Parameter Summary]
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -250,36 +249,10 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     if 'strategy' in trainer_cfg:
         trainer_cfg.pop('strategy')
 
-    # [NEW: Plugin-Style Profiler Architecture]
-    # You can now trigger profiling via command line: python train_guided.py PROFILE_MODE=advanced
-    # Options: 'none', 'advanced', 'trace'
-    profiler_mode = cfg.get('PROFILE_MODE', 'none')
-    profiler = None
-    if profiler_mode == 'advanced':
-        from pytorch_lightning.profilers import AdvancedProfiler
-        profiler = AdvancedProfiler(dirpath=cfg.paths.output_dir, filename="perf_logs")
-        trainer_cfg['max_steps'] = 15
-        log.info("📊 Plugin Enabled: AdvancedProfiler (Console Table Output). Locked to 15 steps.")
-    elif profiler_mode == 'trace':
-        from pytorch_lightning.profilers import PyTorchProfiler
-        try:
-            profiler = PyTorchProfiler(
-                dirpath=os.path.join(cfg.paths.output_dir, 'profiler_logs'),
-                filename="perf_logs",
-                export_to_tb=True,
-                record_shapes=True,
-                profile_memory=True,
-            )
-            trainer_cfg['max_steps'] = 15
-            log.info("🔥 Plugin Enabled: Tensorboard Trace Profiler (Max steps locked to 15)")
-        except Exception as e:
-            log.error(f"Failed to load PyTorchProfiler: {e}")
-
     trainer: Trainer = hydra.utils.instantiate(
         trainer_cfg, 
         callbacks=callbacks, 
         logger=loggers, 
-        profiler=profiler,
         **strategy_kwargs,
         plugins=(SLURMEnvironment(requeue_signal=signal.SIGUSR2) if (cfg.get('launcher',None) is not None) else None),
     )
