@@ -81,11 +81,7 @@ class SystemHealthMonitor(pl.Callback):
                 except:
                     pass
 
-            # [Fix] Add True Proc RSS to differentiate from Page Cache
-            proc = psutil.Process(os.getpid())
-            rss_gb = proc.memory_info().rss / 1024**3
-            
-            log.info(f"❤️ [Health] Step:{trainer.global_step} | Host CPU:{cpu_pct}% | Host RAM:{mem.percent}% ({mem.used/1024**3:.1f}GB/{mem.total/1024**3:.1f}GB) | Proc RSS:{rss_gb:.1f}GB {diag_str} |{gpu_str}")
+            log.info(f"❤️ [Health] Step:{trainer.global_step} | Host CPU:{cpu_pct}% | Host RAM:{mem.percent}% ({mem.used/1024**3:.1f}GB/{mem.total/1024**3:.1f}GB){diag_str} |{gpu_str}")
             
             if mem.percent > 95:
                 log.error("🛑 CRITICAL Host RAM usage (>95%)! Watchdog may kill process soon.")
@@ -175,7 +171,8 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     cfg.trainer.log_every_n_steps = cfg.GENERAL.LOG_STEPS
 
     # Setup model (Using Guided HMR2)
-    model = GuidedHMR2Module(cfg)
+    # Rendering disabled to completely bypass tensorboard rendering overhead and save GPU VRAM
+    model = GuidedHMR2Module(cfg, init_renderer=False)
     
     # [NEW: Trainable Parameter Summary]
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -183,7 +180,7 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     log.info(f"Model Parameters: Total={total_params:,} | Trainable={trainable_params:,} ({trainable_params/total_params:.1%})")
     
     # [NEW: KTI-Guided Surgical Freezing]
-    freeze_depth = cfg.get('FREEZE_DEPTH', 8)
+    freeze_depth = cfg.get('FREEZE_DEPTH', 0)
     if freeze_depth > 0:
         log.info(f"Surgically freezing first {freeze_depth} layers of backbone (ViT stage)...")
         if hasattr(model, 'nvit_backbone') and hasattr(model.nvit_backbone, 'surgical_freeze'):
@@ -215,79 +212,76 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     loggers = [logger]
 
     # Setup checkpoint saving
-    # Monitor val/loss to save the best model (best.ckpt)
-    # save_top_k=1 will keep the single best model based on min val/loss
+    # Monitor train/loss to save the best model (best.ckpt)
+    # save_top_k=1 will keep the single best model based on min train/loss
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         dirpath=os.path.join(cfg.paths.output_dir, 'checkpoints'), 
         every_n_train_steps=cfg.GENERAL.CHECKPOINT_STEPS, 
         save_last=True,
-        monitor='val/loss', # Monitors validation loss for model saving
+        monitor='train/loss_step', # Use step-wise loss for frequent updates
         mode='min',
-        save_top_k=1, 
-        filename='best'
+        save_top_k=-1, 
+        filename='epoch={epoch:02d}-step={step}'
     )
-    
-    # [NEW] Setup Early Stopping
-    early_stop_callback = pl.callbacks.EarlyStopping(
-        monitor='val/loss',
-        min_delta=0.00,
-        patience=10, # Stop after 10 validation cycles without improvement
-        verbose=True,
-        mode='min'
-    )
-
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
     health_monitor = SystemHealthMonitor(log_interval=30)
     callbacks = [
         checkpoint_callback, 
-        early_stop_callback,
         lr_monitor,
         health_monitor,
     ]
     # [Fix] Force DDP strategy with unused params by overriding Hydra config
     # Convert DictConfig to dict to allow popping
-    from pytorch_lightning.strategies import DDPStrategy
-
     trainer_cfg = OmegaConf.to_container(cfg.trainer, resolve=True)
-
-    # devices 默认值
-    if 'devices' not in trainer_cfg or trainer_cfg['devices'] is None:
-        trainer_cfg['devices'] = 1
-
-    devices = int(trainer_cfg['devices'])
-    trainer_cfg['accelerator'] = trainer_cfg.get('accelerator', 'auto')
-    trainer_cfg['num_nodes'] = int(trainer_cfg.get('num_nodes', 1))
-
-    # WebDataset 通常是 IterableDataset；建议禁用 distributed sampler，靠 wds.split_by_node/worker 来切分
-    trainer_cfg['use_distributed_sampler'] = False
+    if 'strategy' in trainer_cfg:
+        trainer_cfg.pop('strategy')
     
-    # [NEW] Enable Periodic Validation
-    trainer_cfg['val_check_interval'] = cfg.GENERAL.CHECKPOINT_STEPS
-    trainer_cfg['limit_val_batches'] = 50 # Only run 50 batches for validation to save time
-
+    
+    # [Autonomous Mode] Dynamic Device Configuration
+    # If devices not set, default to 1. If set to >1, force DDP with unused params.
+    if 'devices' not in trainer_cfg:
+        trainer_cfg['devices'] = 1
+        
+    log.info(f"Instantiating trainer <{cfg.trainer._target_}> with {trainer_cfg['devices']} devices")
+    
+    # Determine Strategy override
     strategy_kwargs = {}
+    # Single-GPU Mode: Remove any DDP strategy to prevent multi-process spawning
+    if 'strategy' in trainer_cfg:
+        trainer_cfg.pop('strategy')
 
-    if devices <= 1:
-        # 单卡：明确不要 strategy，避免多进程
-        trainer_cfg.pop('strategy', None)
-        log.info("Single-GPU mode: strategy disabled.")
-    else:
-        # 多卡：启用真正 DDP（NCCL）并允许 unused params
-        trainer_cfg.pop('strategy', None)  # 避免 Hydra 配置冲突
-        strategy_kwargs["strategy"] = DDPStrategy(
-            process_group_backend="nccl",
-            find_unused_parameters=False,
-        )
-        log.info(f"DDP mode: devices={devices}, find_unused_parameters=True, backend=nccl")
-
-    log.info(f"Instantiating trainer <{cfg.trainer._target_}> with devices={devices}")
+    # [NEW: Plugin-Style Profiler Architecture]
+    # You can now trigger profiling via command line: python train_guided.py PROFILE_MODE=advanced
+    # Options: 'none', 'advanced', 'trace'
+    profiler_mode = cfg.get('PROFILE_MODE', 'none')
+    profiler = None
+    if profiler_mode == 'advanced':
+        from pytorch_lightning.profilers import AdvancedProfiler
+        profiler = AdvancedProfiler(dirpath=cfg.paths.output_dir, filename="perf_logs")
+        trainer_cfg['max_steps'] = 15
+        log.info("📊 Plugin Enabled: AdvancedProfiler (Console Table Output). Locked to 15 steps.")
+    elif profiler_mode == 'trace':
+        from pytorch_lightning.profilers import PyTorchProfiler
+        try:
+            profiler = PyTorchProfiler(
+                dirpath=os.path.join(cfg.paths.output_dir, 'profiler_logs'),
+                filename="perf_logs",
+                export_to_tb=True,
+                record_shapes=True,
+                profile_memory=True,
+            )
+            trainer_cfg['max_steps'] = 15
+            log.info("🔥 Plugin Enabled: Tensorboard Trace Profiler (Max steps locked to 15)")
+        except Exception as e:
+            log.error(f"Failed to load PyTorchProfiler: {e}")
 
     trainer: Trainer = hydra.utils.instantiate(
-        trainer_cfg,
-        callbacks=callbacks,
-        logger=loggers,
+        trainer_cfg, 
+        callbacks=callbacks, 
+        logger=loggers, 
+        profiler=profiler,
         **strategy_kwargs,
-        plugins=None,  # 裸机不需要 SLURMEnvironment
+        plugins=(SLURMEnvironment(requeue_signal=signal.SIGUSR2) if (cfg.get('launcher',None) is not None) else None),
     )
 
     object_dict = {
@@ -304,10 +298,9 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         log_hyperparameters(object_dict)
 
     # [Finetuning] Load weights if specified
-    finetune_from = cfg.get('FINETUNE_FROM', '/home/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt')
-    if finetune_from is not None:
-        log.info(f"Finetuning from checkpoint: {finetune_from}")
-        ckpt = torch.load(finetune_from, map_location='cpu')
+    if 'FINETUNE_FROM' in cfg and cfg.FINETUNE_FROM is not None:
+        log.info(f"Finetuning from checkpoint: {cfg.FINETUNE_FROM}")
+        ckpt = torch.load(cfg.FINETUNE_FROM, map_location='cpu')
         state_dict = ckpt['state_dict']
         
         # Filter state_dict to handle size mismatches and name changes
@@ -318,19 +311,6 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
             k_new = k
             if k.startswith('backbone.'):
                 k_new = k.replace('backbone.', 'nvit_backbone.', 1)
-            
-            # [Fix] Handle AdaptiveNViT's ViTBlock wrapping which adds an extra `.block.`
-            if 'blocks.' in k_new:
-                parts = k_new.split('.')
-                try:
-                    b_idx = parts.index('blocks')
-                    if b_idx + 1 < len(parts) and parts[b_idx + 1].isdigit():
-                        idx = parts[b_idx + 1]
-                        test_key = k_new.replace(f'blocks.{idx}.', f'blocks.{idx}.block.', 1)
-                        if test_key in model_state_dict:
-                            k_new = test_key
-                except ValueError:
-                    pass
             
             if k_new in model_state_dict:
                 if v.shape == model_state_dict[k_new].shape:
@@ -345,7 +325,8 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         matched_keys = total_model_keys - len(missing)
         match_rate = matched_keys / total_model_keys if total_model_keys > 0 else 0
         log.info(f"Loaded weights. Missing: {len(missing)}, Unexpected: {len(unexpected)}, Match Rate: {match_rate:.2%}")
-        # Threshold removed to allow Topology Ablations where massive chunks of layers naturally mismatch
+        if match_rate < 0.90:
+            raise RuntimeError(f"Weight mapping failed: {match_rate:.2%} Match Rate is below 90% threshold! Missing: {len(missing)}.")
 
     # [Fix] Configure ckpt_path.
     # - If cfg.ckpt_path is explicitly set (e.g. via run_full_ddp.sh --resume), use it.

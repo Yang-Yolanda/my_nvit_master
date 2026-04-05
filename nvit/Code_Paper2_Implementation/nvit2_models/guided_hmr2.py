@@ -14,74 +14,8 @@ from hmr2.utils.geometry import perspective_projection
 from hmr2.utils.geometry import perspective_projection
 from omegaconf import open_dict
 import logging
-from hmr2.utils.geometry import aa_to_rotmat
 
 logger = logging.getLogger(__name__)
-
-def conf_weighted_l1_2d(pred_xy, gt_kps_2d):
-    gt_xy = gt_kps_2d[..., :2]
-    conf = gt_kps_2d[..., 2:3].clamp(min=0.0, max=1.0)
-    conf_sum = conf.sum()
-    if conf_sum < 1e-4:
-        return pred_xy.sum() * 0.0
-    
-    l1 = (pred_xy - gt_xy).abs().sum(dim=-1, keepdim=True)
-    num = (l1 * conf).sum()
-    den = conf_sum * 2.0
-    return num / den
-
-def conf_weighted_l2_3d_rootrel(pred_xyz, gt_kps_3d, pelvis_id=0):
-    gt_xyz = gt_kps_3d[..., :3]
-    conf = gt_kps_3d[..., 3:4].clamp(min=0.0, max=1.0)
-
-    Np = pred_xyz.shape[1]
-    Ng = gt_xyz.shape[1]
-    N = min(Np, Ng)
-    pred_xyz = pred_xyz[:, :N]
-    gt_xyz = gt_xyz[:, :N]
-    conf = conf[:, :N]
-
-    if pelvis_id < 0 or pelvis_id >= N:
-        pelvis_id = 0
-
-    pred_rel = pred_xyz - pred_xyz[:, pelvis_id:pelvis_id+1]
-    gt_rel   = gt_xyz   - gt_xyz[:, pelvis_id:pelvis_id+1]
-
-    err = torch.norm(pred_rel - gt_rel, dim=-1, keepdim=True)
-    num = (err * conf).sum()
-    
-    conf_sum = conf.sum()
-    if conf_sum < 1.0:
-        return pred_xyz.sum() * 0.0
-        
-    den = conf_sum
-    return num / den
-
-def to_rotmat_mixed(gt_raw, is_aa_mask, batch_size):
-    device = gt_raw.device
-    is_aa_mask = is_aa_mask.view(-1).bool()
-    assert is_aa_mask.numel() == batch_size
-
-    if gt_raw.dim() >= 2 and gt_raw.shape[-1] == 3 and (gt_raw.dim() == 2 or gt_raw.dim() == 3):
-        gt_aa = gt_raw.view(batch_size, -1, 3)
-        gt_rm = torch.empty(batch_size, gt_aa.shape[1], 3, 3, device=device, dtype=gt_raw.dtype)
-        aa_idx = torch.where(is_aa_mask)[0]
-        rm_idx = torch.where(~is_aa_mask)[0]
-        if aa_idx.numel() > 0:
-            gt_rm[aa_idx] = aa_to_rotmat(gt_aa[aa_idx].reshape(-1,3)).view(aa_idx.numel(), -1, 3, 3)
-        if rm_idx.numel() > 0:
-            raise RuntimeError("Mixed representation detected: gt looks like axis-angle but is_axis_angle says otherwise.")
-        return gt_rm
-
-    if gt_raw.dim() >= 4 and gt_raw.shape[-2:] == (3,3):
-        return gt_raw.view(batch_size, -1, 3, 3)
-
-    gt_flat = gt_raw.view(batch_size, -1)
-    if is_aa_mask.all():
-        return aa_to_rotmat(gt_flat.reshape(-1,3)).view(batch_size, -1, 3, 3)
-    else:
-        return gt_flat.view(batch_size, -1, 3, 3)
-
 
 class GuidedHMR2Module(HMR2):
     def __init__(self, cfg: CfgNode, init_renderer: bool = True):
@@ -113,7 +47,7 @@ class GuidedHMR2Module(HMR2):
         gcn_variant = cfg.MODEL.BACKBONE.get('GCN_VARIANT', cfg.MODEL.BACKBONE.get('gcn_variant', 'guided'))
         
         # [Ablation Support] Make depth, switch layers configurable
-        depth = cfg.MODEL.BACKBONE.get('depth', 11) # Default to target 11
+        depth = cfg.MODEL.BACKBONE.get('depth', 8) # Force 8 to leave room for the 4 Kineto-Head blocks
         sl1 = cfg.MODEL.BACKBONE.get('switch_layer_1', 8)
         sl2 = cfg.MODEL.BACKBONE.get('switch_layer_2', 11)
         
@@ -160,8 +94,9 @@ class GuidedHMR2Module(HMR2):
             if cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER.get('mlp_dim', 1024) == 1024:
                 cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER.mlp_dim = 1024
              
-        # 2. Overwrite Head: GuidedSMPLHead
-        self.smpl_head = GuidedSMPLHead(cfg)
+        # 2. Overwrite Head: AnatomicalSMPLHead (Three-Stage Architecture)
+        from nvit2_models.guided_head import AnatomicalSMPLHead
+        self.smpl_head = AnatomicalSMPLHead(cfg)
         
         # 3. Add Heatmap Loss logic
         # We need a dedicated Heatmap Loss (MSE)
@@ -323,38 +258,19 @@ class GuidedHMR2Module(HMR2):
         is_axis_angle = batch['smpl_params_is_axis_angle']
 
         # 1. 3D Keypoint Loss
-        loss_keypoints_2d = conf_weighted_l1_2d(pred_keypoints_2d[..., :2], gt_keypoints_2d)
-        loss_keypoints_3d = conf_weighted_l2_3d_rootrel(pred_keypoints_3d[..., :3], gt_keypoints_3d, pelvis_id=39)
-
-        # [Diagnostic] Record conf sums to monitor dilution
-        kp3d_conf_sum = gt_keypoints_3d[..., 3].sum()
-        kp2d_conf_sum = gt_keypoints_2d[..., 2].sum()
+        loss_keypoints_2d = self.keypoint_2d_loss(pred_keypoints_2d, gt_keypoints_2d)
+        # [Fix] HMR2 uses pelvis_id=39 (regressed) for loss calculation
+        loss_keypoints_3d = self.keypoint_3d_loss(pred_keypoints_3d, gt_keypoints_3d, pelvis_id=39) 
 
         # 2. SMPL Parameter Loss
         loss_smpl_params = {}
         for k, pred in pred_smpl_params.items():
-            gt_raw = gt_smpl_params[k]
+            gt = gt_smpl_params[k].view(batch_size, -1)
+            if is_axis_angle[k].all():
+                from hmr2.utils.geometry import aa_to_rotmat
+                gt = aa_to_rotmat(gt.reshape(-1, 3)).view(batch_size, -1, 3, 3)
             has_gt = has_smpl_params[k]
-
-            is_aa = is_axis_angle[k]
-            if k in ['global_orient', 'body_pose']:
-                if torch.is_tensor(is_aa) and is_aa.numel() == batch_size:
-                    gt_rm = to_rotmat_mixed(gt_raw, is_aa, batch_size)
-                    gt_use = gt_rm.reshape(batch_size, -1)
-                else:
-                    gt = gt_raw.view(batch_size, -1)
-                    if torch.as_tensor(is_aa).bool().all():
-                        from hmr2.utils.geometry import aa_to_rotmat
-                        gt = aa_to_rotmat(gt.reshape(-1, 3)).view(batch_size, -1, 3, 3).reshape(batch_size, -1)
-                    gt_use = gt
-            else:
-                gt_use = gt_raw.view(batch_size, -1)
-
-            loss_smpl_params[k] = self.smpl_parameter_loss(
-                pred.reshape(batch_size, -1),
-                gt_use,
-                has_gt
-            )
+            loss_smpl_params[k] = self.smpl_parameter_loss(pred.reshape(batch_size, -1), gt.reshape(batch_size, -1), has_gt)
 
         # 3. auxiliary Heatmap Loss (Coordinate Regression)
         device = output['pred_cam'].device
@@ -433,9 +349,13 @@ class GuidedHMR2Module(HMR2):
              pred_y = (weights * yy).sum(dim=(-1, -2))
              
              # Loss Calculation
-             per_joint_l1 = (pred_x - gt_x_target).abs() + (pred_y - gt_y_target).abs()
-             w = gt_conf_target * valid_mask.float().unsqueeze(0)
-             loss_map = (per_joint_l1 * w).sum() / (w.sum() + 1e-8)
+             # Only penalize valid mapped joints with non-zero confidence
+             loss_x = F.l1_loss(pred_x * gt_conf_target, gt_x_target * gt_conf_target, reduction='none')
+             loss_y = F.l1_loss(pred_y * gt_conf_target, gt_y_target * gt_conf_target, reduction='none')
+             
+             # Zero out losses for unmapped joints (implicit via conf=0, but explicit safety)
+             loss_map = (loss_x + loss_y) * valid_mask.float().unsqueeze(0)
+             loss_map = loss_map.mean() # Mean over batches and joints
 
         # [Fix] Clamp heatmap loss to prevent explosion
         loss_map_clamped = torch.clamp(loss_map, max=100.0)
@@ -470,10 +390,6 @@ class GuidedHMR2Module(HMR2):
 
         for k, v in loss_smpl_params.items():
             losses['loss_' + k] = v.detach()
-            
-        # [Diagnostic] Inject conf sums
-        losses['metrics/kp3d_conf_sum'] = kp3d_conf_sum.detach()
-        losses['metrics/kp2d_conf_sum'] = kp2d_conf_sum.detach()
 
         output['losses'] = losses
         
@@ -552,11 +468,21 @@ class GuidedHMR2Module(HMR2):
         
         # Only step optimizer every accumulate_grad_batches
         if (batch_idx + 1) % accumulate_grad_batches == 0:
-            # [Fix] Stronger Gradient Clipping using Lightning native function for safe AMP unscaling
-            clip_val = self.cfg.TRAIN.get('GRAD_CLIP_VAL', 0.5)
+            # [Fix] Stronger Gradient Clipping (Reduce from default to prevent explosion)
+            clip_val = self.cfg.TRAIN.get('GRAD_CLIP_VAL', 0.5)  # Lowered to 0.5
             if clip_val > 0:
-                self.clip_gradients(optimizer, gradient_clip_val=clip_val, gradient_clip_algorithm="value")
-
+                gn = torch.nn.utils.clip_grad_norm_(self.get_parameters(), clip_val, error_if_nonfinite=False)
+                
+                # [Fix] Emergency Brake: Relaxed to 2000.0 for initial spikes
+                if gn > 2000.0 or torch.isnan(gn) or torch.isinf(gn):
+                    # [Debug] Print losses to identify explosion source
+                    loss_breakdown = {k: v.item() if isinstance(v, torch.Tensor) else v for k, v in output['losses'].items()}
+                    print(f"WARNING: Grad norm {gn:.2f} too high at step {self.global_step}. Skipping. Losses: {loss_breakdown}")
+                    optimizer.zero_grad()  # Clear gradients
+                    return output
+                    
+                self.log('train/grad_norm', gn, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+                
             optimizer.step()
             optimizer.zero_grad()
         
@@ -569,7 +495,7 @@ class GuidedHMR2Module(HMR2):
         if self.global_step > 0 and self.global_step % self.cfg.GENERAL.LOG_STEPS == 0:
              self.tensorboard_logging(batch, output, self.global_step, train=True)
 
-        self.log('train/loss', output['losses']['loss'], on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train/loss', output['losses']['loss'], on_step=True, on_epoch=True, prog_bar=True, logger=False)
 
         return output
 
@@ -580,9 +506,6 @@ class GuidedHMR2Module(HMR2):
         output = self.forward_step(batch, train=False)
         loss = self.compute_loss(batch, output, train=False)
         output['loss'] = loss
-        
-        # [NEW] Log validation loss for EarlyStopping and monitoring
-        self.log('val/loss', loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         
         # Calculate MPJPE (Mean Per Joint Position Error) in mm
         # pred_keypoints_3d: (B, N, 3) in meters (assumed)

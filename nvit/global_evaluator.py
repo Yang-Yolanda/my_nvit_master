@@ -177,8 +177,7 @@ def main():
     parser.add_argument("--datasets", type=str, default="ALL", help="Comma-separated list of datasets or ALL")
     args = parser.parse_args()
 
-    # Fix trailing slash bug causing empty run_name
-    run_name = os.path.basename(os.path.normpath(args.run_path))
+    run_name = os.path.basename(args.run_path)
     output_root = BASE_DIR / "outputs" / "eval_global" / args.chapter / run_name
     output_root.mkdir(parents=True, exist_ok=True)
 
