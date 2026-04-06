@@ -354,6 +354,20 @@ class AdaptiveNViT(nn.Module):
             
         x = self.norm(x)
         
+        # [NEW ARCHITECTURE] If map_layer >= depth (e.g., layers 8-10 are all Mamba), Heatmap Mapper was skipped!
+        # Guarantee Heatmap processing occurs at the END of the backbone if not mapped yet.
+        if not self.mapped:
+            cls_t = x[:, 0:1, :]
+            x_patches_raw = x[:, 1:, :]
+            x_joints, heatmaps = self.patch_to_joint(x_patches_raw)
+            self.mapped = True
+            
+            if "hybrid" in self.mamba_variant:
+                self.saved_patches = x_patches_raw
+                x = x_joints
+            elif self.gcn_variant != 'guided' or self.mamba_variant.startswith('kinetic'):
+                x = x_joints
+                
         # [Topology C] Concatenation Logic
         if "hybrid" in self.mamba_variant and hasattr(self, 'saved_patches'):
             # x is (B, 24, C) refined joints

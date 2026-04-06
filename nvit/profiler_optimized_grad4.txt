@@ -1,0 +1,247 @@
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+[[36m2026-04-05 19:08:22,381[0m][[34mhmr2.utils.misc[0m][[32mINFO[0m] - Enforcing tags! <cfg.extras.enforce_tags=True>[0m
+WARNING: You are using a SMPL model, with only 10 shape coefficients.
+[[36m2026-04-05 19:08:26,920[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Initializing AdaptiveNViT with Depth=11, Mamba=spiral, GCN=guided, Sl1=8, Sl2=10[0m
+[[36m2026-04-05 19:08:27,170[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 0: ViT[0m
+[[36m2026-04-05 19:08:27,288[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 1: ViT[0m
+[[36m2026-04-05 19:08:27,405[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 2: ViT[0m
+[[36m2026-04-05 19:08:27,523[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 3: ViT[0m
+[[36m2026-04-05 19:08:27,640[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 4: ViT[0m
+[[36m2026-04-05 19:08:27,757[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 5: ViT[0m
+[[36m2026-04-05 19:08:27,874[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 6: ViT[0m
+[[36m2026-04-05 19:08:27,991[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 7: ViT[0m
+[[36m2026-04-05 19:08:28,077[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 8: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:28,208[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 9: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:28,341[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 10: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:28,341[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head depth to 3 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:28,342[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head heads to 4 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:28,516[0m][[34m__main__[0m][[32mINFO[0m] - Model Parameters: Total=209,935,727 | Trainable=209,935,727 (100.0%)[0m
+[[36m2026-04-05 19:08:28,522[0m][[34m__main__[0m][[32mINFO[0m] - Instantiating trainer <pytorch_lightning.Trainer> with 5 devices[0m
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/lightning_fabric/connector.py:572: `precision=16` is supported for historical reasons but its usage is discouraged. Please set your precision to 16-mixed instead!
+Using 16bit Automatic Mixed Precision (AMP)
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+HPU available: False, using: 0 HPUs
+[[36m2026-04-05 19:08:28,780[0m][[34m__main__[0m][[32mINFO[0m] - Logging hyperparameters![0m
+[[36m2026-04-05 19:08:28,797[0m][[34m__main__[0m][[32mINFO[0m] - Finetuning from checkpoint: /home/yangz/NViT-master/logs/train/runs/2026-04-03_08-09-28/checkpoints/last.ckpt[0m
+/home/yangz/NViT-master/nvit/train_guided.py:280: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(cfg.FINETUNE_FROM, map_location='cpu')
+[[36m2026-04-05 19:08:29,703[0m][[34m__main__[0m][[32mINFO[0m] - Loaded weights. Missing: 33, Unexpected: 0, Match Rate: 88.46%[0m
+[[36m2026-04-05 19:08:29,705[0m][[34m__main__[0m][[32mINFO[0m] - No checkpoint found. Starting fresh run.[0m
+[[36m2026-04-05 19:08:29,705[0m][[34m__main__[0m][[32mINFO[0m] - Trainer Max Steps: 1000000[0m
+[[36m2026-04-05 19:08:29,705[0m][[34m__main__[0m][[32mINFO[0m] - Using ckpt_path: None[0m
+Initializing distributed: GLOBAL_RANK: 0, MEMBER: 1/5
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+WARNING: You are using a SMPL model, with only 10 shape coefficients.
+[[36m2026-04-05 19:08:40,457[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Initializing AdaptiveNViT with Depth=11, Mamba=spiral, GCN=guided, Sl1=8, Sl2=10[0m
+[[36m2026-04-05 19:08:40,707[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 0: ViT[0m
+[[36m2026-04-05 19:08:40,824[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 1: ViT[0m
+[[36m2026-04-05 19:08:41,047[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 2: ViT[0m
+[[36m2026-04-05 19:08:41,166[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 3: ViT[0m
+[[36m2026-04-05 19:08:41,338[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 4: ViT[0m
+[[36m2026-04-05 19:08:41,517[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 5: ViT[0m
+WARNING: You are using a SMPL model, with only 10 shape coefficients.
+[[36m2026-04-05 19:08:41,544[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Initializing AdaptiveNViT with Depth=11, Mamba=spiral, GCN=guided, Sl1=8, Sl2=10[0m
+WARNING: You are using a SMPL model, with only 10 shape coefficients.
+[[36m2026-04-05 19:08:41,586[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Initializing AdaptiveNViT with Depth=11, Mamba=spiral, GCN=guided, Sl1=8, Sl2=10[0m
+[[36m2026-04-05 19:08:41,729[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 6: ViT[0m
+[[36m2026-04-05 19:08:41,798[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 0: ViT[0m
+[[36m2026-04-05 19:08:41,858[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 7: ViT[0m
+[[36m2026-04-05 19:08:41,880[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 0: ViT[0m
+[[36m2026-04-05 19:08:41,920[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 1: ViT[0m
+[[36m2026-04-05 19:08:41,945[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 8: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:42,067[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 2: ViT[0m
+[[36m2026-04-05 19:08:42,076[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 9: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:42,180[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 1: ViT[0m
+[[36m2026-04-05 19:08:42,209[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 10: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:42,210[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head depth to 3 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:42,211[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head heads to 4 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:42,304[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 3: ViT[0m
+[[36m2026-04-05 19:08:42,439[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 2: ViT[0m
+[[36m2026-04-05 19:08:42,450[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 4: ViT[0m
+[[36m2026-04-05 19:08:42,575[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 5: ViT[0m
+/home/yangz/NViT-master/nvit/train_guided.py:280: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(cfg.FINETUNE_FROM, map_location='cpu')
+[[36m2026-04-05 19:08:42,615[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 3: ViT[0m
+[[36m2026-04-05 19:08:42,703[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 6: ViT[0m
+[[36m2026-04-05 19:08:42,791[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 4: ViT[0m
+[[36m2026-04-05 19:08:42,824[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 7: ViT[0m
+WARNING: You are using a SMPL model, with only 10 shape coefficients.
+[[36m2026-04-05 19:08:42,893[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Initializing AdaptiveNViT with Depth=11, Mamba=spiral, GCN=guided, Sl1=8, Sl2=10[0m
+[[36m2026-04-05 19:08:42,911[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 8: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:43,044[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 9: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:43,048[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 5: ViT[0m
+[[36m2026-04-05 19:08:43,177[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 10: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:43,177[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head depth to 3 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:43,178[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head heads to 4 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:43,297[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 0: ViT[0m
+[[36m2026-04-05 19:08:43,352[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 6: ViT[0m
+[[36m2026-04-05 19:08:43,473[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 1: ViT[0m
+[[36m2026-04-05 19:08:43,529[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 7: ViT[0m
+/home/yangz/NViT-master/nvit/train_guided.py:280: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(cfg.FINETUNE_FROM, map_location='cpu')
+[[36m2026-04-05 19:08:43,647[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 2: ViT[0m
+[[36m2026-04-05 19:08:43,736[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 8: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:43,840[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 3: ViT[0m
+[[36m2026-04-05 19:08:43,968[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 9: SpatialMamba(spiral)[0m
+Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/5
+[[36m2026-04-05 19:08:44,048[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 4: ViT[0m
+[[36m2026-04-05 19:08:44,139[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 10: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:44,141[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head depth to 3 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:44,141[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head heads to 4 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:44,224[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 5: ViT[0m
+[[36m2026-04-05 19:08:44,399[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 6: ViT[0m
+[[36m2026-04-05 19:08:44,574[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 7: ViT[0m
+/home/yangz/NViT-master/nvit/train_guided.py:280: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(cfg.FINETUNE_FROM, map_location='cpu')
+[[36m2026-04-05 19:08:44,694[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 8: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:44,864[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 9: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:45,035[0m][[34mnvit2_models.nvit_hybrid[0m][[32mINFO[0m] - Layer 10: SpatialMamba(spiral)[0m
+[[36m2026-04-05 19:08:45,036[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head depth to 3 to match Run 9 weights.[0m
+[[36m2026-04-05 19:08:45,037[0m][[34mnvit2_models.guided_hmr2[0m][[32mINFO[0m] - Overriding SMPL Head heads to 4 to match Run 9 weights.[0m
+Initializing distributed: GLOBAL_RANK: 2, MEMBER: 3/5
+/home/yangz/NViT-master/nvit/train_guided.py:280: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(cfg.FINETUNE_FROM, map_location='cpu')
+Initializing distributed: GLOBAL_RANK: 1, MEMBER: 2/5
+Initializing distributed: GLOBAL_RANK: 4, MEMBER: 5/5
+----------------------------------------------------------------------------------------------------
+distributed_backend=nccl
+All distributed processes registered. Starting with 5 processes
+----------------------------------------------------------------------------------------------------
+
+LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3,4,5,6,7]
+LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1,2,3,4,5,6,7]
+LOCAL_RANK: 2 - CUDA_VISIBLE_DEVICES: [0,1,2,3,4,5,6,7]
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1,2,3,4,5,6,7]
+LOCAL_RANK: 4 - CUDA_VISIBLE_DEVICES: [0,1,2,3,4,5,6,7]
+
+  | Name                | Type           | Params | Mode 
+---------------------------------------------------------------
+0 | smpl_head           | GuidedSMPLHead | 14.6 M | train
+1 | discriminator       | Discriminator  | 1.8 M  | train
+2 | keypoint_3d_loss    | Keypoint3DLoss | 0      | train
+3 | keypoint_2d_loss    | Keypoint2DLoss | 0      | train
+4 | smpl_parameter_loss | ParameterLoss  | 0      | train
+5 | smpl                | SMPL           | 0      | train
+6 | nvit_backbone       | AdaptiveNViT   | 193 M  | train
+7 | heatmap_criterion   | MSELoss        | 0      | train
+---------------------------------------------------------------
+209 M     Trainable params
+0         Non-trainable params
+209 M     Total params
+839.743   Total estimated model params size (MB)
+375       Modules in train mode
+0         Modules in eval mode
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+⚠️ Warning: /fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy not found. Using dummy histogram.
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/pytorch_lightning/loops/fit_loop.py:310: The number of training batches (6) is smaller than the logging interval Trainer(log_every_n_steps=1000). Set a lower value for log_every_n_steps if you want to see logs for the training epoch.
+Training: |          | 0/? [00:00<?, ?it/s]Training:   0%|          | 0/6 [00:00<?, ?it/s]Epoch 0:   0%|          | 0/6 [00:00<?, ?it/s] /home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/webdataset/handlers.py:34: UserWarning: FileNotFoundError(2, 'No such file or directory')
+  warnings.warn(repr(exn))
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/pytorch_lightning/utilities/data.py:79: Trying to infer the `batch_size` from an ambiguous collection. The batch size we found is 144. To avoid any miscalculations, use `self.log(..., batch_size=batch_size)`.
+Epoch 0:  17%|█▋        | 1/6 [00:10<00:50,  0.10it/s]Epoch 0:  17%|█▋        | 1/6 [00:10<00:50,  0.10it/s, train/loss_step=26.50][[36m2026-04-05 19:08:59,990[0m][[34m__main__[0m][[32mINFO[0m] - ❤️ [Health] Step:0 | Host CPU:16.7% | Host RAM:16.1% (40.6GB/251.5GB) | GPU0:73.8%(17.5GB) GPU1:74.7%(17.7GB) GPU2:74.8%(17.7GB) GPU3:74.8%(17.7GB) GPU4:75.0%(17.8GB) GPU5:1.1%(0.3GB) GPU6:1.1%(0.3GB) GPU7:1.1%(0.3GB)[0m
+Epoch 0:  33%|███▎      | 2/6 [00:11<00:22,  0.18it/s, train/loss_step=26.50]Epoch 0:  33%|███▎      | 2/6 [00:11<00:23,  0.17it/s, train/loss_step=31.70]Epoch 0:  50%|█████     | 3/6 [00:12<00:12,  0.24it/s, train/loss_step=31.70]Epoch 0:  50%|█████     | 3/6 [00:12<00:12,  0.24it/s, train/loss_step=25.70]/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torch/autograd/graph.py:825: UserWarning: Grad strides do not match bucket view strides. This may indicate grad was not created according to the gradient layout contract, or that the param's strides changed since DDP was constructed.  This is not an error, but may impair performance.
+grad.sizes() = [24, 320, 1, 1], strides() = [320, 1, 320, 320]
+bucket_view.sizes() = [24, 320, 1, 1], strides() = [320, 1, 1, 1] (Triggered internally at /opt/conda/conda-bld/pytorch_1729647352509/work/torch/csrc/distributed/c10d/reducer.cpp:327.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torch/autograd/graph.py:825: UserWarning: Grad strides do not match bucket view strides. This may indicate grad was not created according to the gradient layout contract, or that the param's strides changed since DDP was constructed.  This is not an error, but may impair performance.
+grad.sizes() = [24, 320, 1, 1], strides() = [320, 1, 320, 320]
+bucket_view.sizes() = [24, 320, 1, 1], strides() = [320, 1, 1, 1] (Triggered internally at /opt/conda/conda-bld/pytorch_1729647352509/work/torch/csrc/distributed/c10d/reducer.cpp:327.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torch/autograd/graph.py:825: UserWarning: Grad strides do not match bucket view strides. This may indicate grad was not created according to the gradient layout contract, or that the param's strides changed since DDP was constructed.  This is not an error, but may impair performance.
+grad.sizes() = [24, 320, 1, 1], strides() = [320, 1, 320, 320]
+bucket_view.sizes() = [24, 320, 1, 1], strides() = [320, 1, 1, 1] (Triggered internally at /opt/conda/conda-bld/pytorch_1729647352509/work/torch/csrc/distributed/c10d/reducer.cpp:327.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torch/autograd/graph.py:825: UserWarning: Grad strides do not match bucket view strides. This may indicate grad was not created according to the gradient layout contract, or that the param's strides changed since DDP was constructed.  This is not an error, but may impair performance.
+grad.sizes() = [24, 320, 1, 1], strides() = [320, 1, 320, 320]
+bucket_view.sizes() = [24, 320, 1, 1], strides() = [320, 1, 1, 1] (Triggered internally at /opt/conda/conda-bld/pytorch_1729647352509/work/torch/csrc/distributed/c10d/reducer.cpp:327.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torch/autograd/graph.py:825: UserWarning: Grad strides do not match bucket view strides. This may indicate grad was not created according to the gradient layout contract, or that the param's strides changed since DDP was constructed.  This is not an error, but may impair performance.
+grad.sizes() = [24, 320, 1, 1], strides() = [320, 1, 320, 320]
+bucket_view.sizes() = [24, 320, 1, 1], strides() = [320, 1, 1, 1] (Triggered internally at /opt/conda/conda-bld/pytorch_1729647352509/work/torch/csrc/distributed/c10d/reducer.cpp:327.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+WARNING: Grad norm nan too high at step 0. Skipping. Losses: {'loss': 25.526020050048828, 'loss_keypoints_2d': 1352.2071533203125, 'loss_keypoints_3d': 236.46743774414062, 'loss_heatmap': 0.0, 'loss_global_orient': 0.0, 'loss_body_pose': 0.0, 'loss_betas': 361.15283203125}
+Epoch 0:  67%|██████▋   | 4/6 [00:17<00:08,  0.23it/s, train/loss_step=25.70]Epoch 0:  67%|██████▋   | 4/6 [00:17<00:08,  0.23it/s, train/loss_step=25.70]Epoch 0:  83%|████████▎ | 5/6 [00:19<00:03,  0.26it/s, train/loss_step=25.70]Epoch 0:  83%|████████▎ | 5/6 [00:19<00:03,  0.26it/s, train/loss_step=18.30]Epoch 0: 100%|██████████| 6/6 [00:20<00:00,  0.29it/s, train/loss_step=18.30]Epoch 0: 100%|██████████| 6/6 [00:21<00:00,  0.28it/s, train/loss_step=27.60]/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/pytorch_lightning/trainer/connectors/logger_connector/result.py:434: It is recommended to use `self.log('train/loss', ..., sync_dist=True)` when logging on epoch level in distributed setting to accumulate the metric across devices.
+Epoch 0: 100%|██████████| 6/6 [00:21<00:00,  0.28it/s, train/loss_step=27.60, train/loss_epoch=25.90]`Trainer.fit` stopped: `max_epochs=1` reached.
+Epoch 0: 100%|██████████| 6/6 [00:21<00:00,  0.28it/s, train/loss_step=27.60, train/loss_epoch=25.90]WARNING: Grad norm nan too high at step 0. Skipping. Losses: {'loss': 25.914854049682617, 'loss_keypoints_2d': 1526.3304443359375, 'loss_keypoints_3d': 209.42892456054688, 'loss_heatmap': 0.0, 'loss_global_orient': 0.0, 'loss_body_pose': 0.0, 'loss_betas': 360.2093505859375}
+FIT Profiler Report
+Profile stats for: records rank: 0
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                          ProfilerStep*         0.00%       0.000us         0.00%       0.000us       0.000us        5.342s       140.12%        5.342s        5.342s             1  
+                        DistributedDataParallel.forward         0.00%       0.000us         0.00%       0.000us       0.000us        4.041s       106.00%        4.041s        1.347s             3  
+autograd::engine::evaluate_function: torch::autograd...         0.09%       9.239ms         0.31%      30.734ms      38.226us       0.000us         0.00%        1.110s       1.381ms           804  
+                                     record_param_comms         0.00%     367.916us         0.01%     497.881us      99.576us        1.099s        28.82%        1.099s     219.777ms             5  
+                                       c10d::allreduce_         0.00%     122.057us         0.00%     374.019us     374.019us       0.000us         0.00%        1.099s        1.099s             1  
+ncclDevKernel_AllReduce_Sum_f32_RING_LL(ncclDevComm*...         0.00%       0.000us         0.00%       0.000us       0.000us        1.099s        28.82%        1.099s        1.099s             1  
+                                        nccl:all_reduce         0.00%       0.000us         0.00%       0.000us       0.000us        1.099s        28.82%        1.099s        1.099s             1  
+                                               aten::mm         0.14%      13.764ms         0.22%      21.164ms      45.810us     900.764ms        23.63%     900.764ms       1.950ms           462  
+                                           aten::linear         0.02%       2.049ms         0.61%      60.176ms     161.763us       0.000us         0.00%     799.960ms       2.150ms           372  
+    autograd::engine::evaluate_function: AddmmBackward0         0.03%       3.242ms         0.34%      32.928ms     223.997us       0.000us         0.00%     726.641ms       4.943ms           147  
+                                         AddmmBackward0         0.02%       1.608ms         0.18%      17.238ms     117.263us       0.000us         0.00%     706.383ms       4.805ms           147  
+       [pl][profile][Strategy]DDPStrategy.training_step         0.01%     645.362us        32.78%        3.214s        1.071s       0.000us         0.00%     686.265ms     228.755ms             3  
+                        DistributedDataParallel.forward         9.17%     898.905ms        32.77%        3.213s        1.071s       0.000us         0.00%     686.265ms     228.755ms             3  
+void cutlass::Kernel<cutlass_80_tensorop_f16_s16816g...         0.00%       0.000us         0.00%       0.000us       0.000us     475.634ms        12.48%     475.634ms       3.716ms           128  
+                        [pl][profile]run_training_batch         0.01%     600.556us        24.22%        2.375s        1.187s       0.000us         0.00%     463.020ms     231.510ms             2  
+                                            aten::addmm         0.06%       6.064ms         0.09%       8.527ms      54.658us     379.293ms         9.95%     379.293ms       2.431ms           156  
+                                          ProfilerStep*        24.79%        2.431s        67.91%        6.658s        2.219s       0.000us         0.00%     302.056ms     100.685ms             3  
+void cutlass::Kernel<cutlass_80_tensorop_f16_s16816g...         0.00%       0.000us         0.00%       0.000us       0.000us     266.097ms         6.98%     266.097ms       4.158ms            64  
+void cutlass::Kernel<cutlass_80_tensorop_f16_s16816g...         0.00%       0.000us         0.00%       0.000us       0.000us     249.679ms         6.55%     249.679ms       3.468ms            72  
+autograd::engine::evaluate_function: MambaInnerFnBac...         0.02%       1.827ms         0.35%      34.001ms       3.778ms       0.000us         0.00%     223.065ms      24.785ms             9  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 9.804s
+Self CUDA time total: 3.812s
+
+
+[[36m2026-04-05 19:09:21,773[0m][[34m__main__[0m][[32mINFO[0m] - Fitting done[0m
+[[36m2026-04-05 19:09:21,779[0m][[34mhmr2.utils.misc[0m][[32mINFO[0m] - Closing loggers...[0m
+[[36m2026-04-05 19:09:21,780[0m][[34mhmr2.utils.misc[0m][[32mINFO[0m] - Output dir: /home/yangz/NViT-master/logs/train/runs/2026-04-05_19-08-22[0m
+WARNING: Grad norm nan too high at step 0. Skipping. Losses: {'loss': 25.26154327392578, 'loss_keypoints_2d': 1439.3504638671875, 'loss_keypoints_3d': 213.79623413085938, 'loss_heatmap': 0.0, 'loss_global_orient': 0.0, 'loss_body_pose': 0.0, 'loss_betas': 356.4519348144531}
+WARNING: Grad norm nan too high at step 0. Skipping. Losses: {'loss': 28.500709533691406, 'loss_keypoints_2d': 1562.1455078125, 'loss_keypoints_3d': 254.12423706054688, 'loss_heatmap': 0.0, 'loss_global_orient': 0.0, 'loss_body_pose': 0.0, 'loss_betas': 346.08441162109375}
+WARNING: Grad norm nan too high at step 0. Skipping. Losses: {'loss': 26.052217483520508, 'loss_keypoints_2d': 1508.9404296875, 'loss_keypoints_3d': 215.6875762939453, 'loss_heatmap': 0.0, 'loss_global_orient': 0.0, 'loss_body_pose': 0.0, 'loss_betas': 356.8680419921875}

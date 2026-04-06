@@ -163,6 +163,7 @@ class GuidedSMPLHead(nn.Module):
         # 3. Cam: Bias = 0, Weights = Tiny
         nn.init.normal_(self.deccam.weight, std=0.001)
         nn.init.constant_(self.deccam.bias, 0)
+        self.deccam.bias.data[0] = 1.0  # [Fix] Rule 4: Camera Scale initialized to 1.0
         with torch.no_grad():
             self.deccam.bias[0] = 1.0 # Set scale s=1.0
         

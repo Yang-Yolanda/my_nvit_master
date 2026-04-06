@@ -49,7 +49,8 @@ class GuidedHMR2Module(HMR2):
         # [Ablation Support] Make depth, switch layers configurable
         depth = cfg.MODEL.BACKBONE.get('depth', 11) # Default to target 11
         sl1 = cfg.MODEL.BACKBONE.get('switch_layer_1', 8)
-        sl2 = cfg.MODEL.BACKBONE.get('switch_layer_2', 11)
+        # [Fix] Set switch_layer_2 default to 10 (depth-1) so HeatmapMapper triggers properly.
+        sl2 = cfg.MODEL.BACKBONE.get('switch_layer_2', 10)
         
         logger.info(f"Initializing AdaptiveNViT with Depth={depth}, Mamba={mamba_variant}, GCN={gcn_variant}, Sl1={sl1}, Sl2={sl2}")
         
@@ -463,24 +464,28 @@ class GuidedHMR2Module(HMR2):
         
         # Scale loss to maintain effective batch size gradients
         loss = loss / accumulate_grad_batches
-        self.manual_backward(loss)
+        
+        from contextlib import nullcontext
+        is_accumulating = (batch_idx + 1) % accumulate_grad_batches != 0
+        sync_context = nullcontext()
+        if is_accumulating:
+            if hasattr(self, 'no_sync'):
+                sync_context = self.no_sync()
+            elif hasattr(self.trainer.model, 'no_sync'):
+                sync_context = self.trainer.model.no_sync()
+            elif hasattr(getattr(self.trainer, 'strategy', None), 'model') and hasattr(self.trainer.strategy.model, 'no_sync'):
+                sync_context = self.trainer.strategy.model.no_sync()
+                
+        with sync_context:
+            self.manual_backward(loss)
         
         # Only step optimizer every accumulate_grad_batches
         if (batch_idx + 1) % accumulate_grad_batches == 0:
-            # [Fix] Stronger Gradient Clipping (Reduce from default to prevent explosion)
-            clip_val = self.cfg.TRAIN.get('GRAD_CLIP_VAL', 0.5)  # Lowered to 0.5
+            # [Fix] Use Lightning's native clip_gradients to properly unscale mixed-precision FP16 gradients!
+            # Manual torch.nn.utils.clip_grad_norm_ prevents the GradScaler from seeing the Inf/NaN and self-healing.
+            clip_val = self.cfg.TRAIN.get('GRAD_CLIP_VAL', 0.5)
             if clip_val > 0:
-                gn = torch.nn.utils.clip_grad_norm_(self.get_parameters(), clip_val, error_if_nonfinite=False)
-                
-                # [Fix] Emergency Brake: Relaxed to 2000.0 for initial spikes
-                if gn > 2000.0 or torch.isnan(gn) or torch.isinf(gn):
-                    # [Debug] Print losses to identify explosion source
-                    loss_breakdown = {k: v.item() if isinstance(v, torch.Tensor) else v for k, v in output['losses'].items()}
-                    print(f"WARNING: Grad norm {gn:.2f} too high at step {self.global_step}. Skipping. Losses: {loss_breakdown}")
-                    optimizer.zero_grad()  # Clear gradients
-                    return output
-                    
-                self.log('train/grad_norm', gn, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+                self.clip_gradients(optimizer, gradient_clip_val=clip_val, gradient_clip_algorithm="norm")
                 
             optimizer.step()
             optimizer.zero_grad()

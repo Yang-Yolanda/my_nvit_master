@@ -68,7 +68,8 @@ class PatchScanMamba(nn.Module):
     """
     def __init__(self, dim, img_size=(256, 192), patch_size=16, variant='spiral'):
         super().__init__()
-        self.block = BidirectionalMambaBlock(dim)
+        # Changed to strictly FORWARD dynamics as requested by the user
+        self.block = MambaBlock(dim)
         self.variant = variant
         
         # Precompute Scan Order (Spiral Out from Center)
@@ -95,12 +96,21 @@ class PatchScanMamba(nn.Module):
         # Center coords
         cy, cx = (H-1)/2.0, (W-1)/2.0
         
-        # 3. Distance from Center
-        dist = (y - cy)**2 + (x - cx)**2
-        dist_flat = dist.flatten()
+        dy = y - cy
+        dx = x - cx
         
-        # 4. Sort by distance (Center -> Periphery)
-        indices = torch.argsort(dist_flat)
+        # 3. Polar Coordinates: Distance & Angle
+        dist = dy**2 + dx**2
+        # Angle in [0, 2*pi]
+        angle = torch.atan2(dy, dx) + torch.pi
+        
+        # 4. Composite Key Sort (Distance Major, Angle Minor)
+        # Using a large multiplier on distance ensures ring-by-ring progression,
+        # and smooth angular wrapping within each concentric ring.
+        sort_keys = dist * 1000.0 + angle
+        sort_keys_flat = sort_keys.flatten()
+        
+        indices = torch.argsort(sort_keys_flat)
         return indices
         
     def forward(self, x):
