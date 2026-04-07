@@ -14,7 +14,7 @@ conda activate 4D-humans 2>/dev/null || source activate 4D-humans 2>/dev/null
 # export HYDRA_FULL_ERROR=1
 
 # 防多卡通讯爆炸
-export NCCL_SHM_DISABLE=1
+export TORCH_NCCL_SHM_DISABLE=1
 # 防 3090 显存颗粒碎片化报错
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
 # 开三代硬件加速
