@@ -23,6 +23,20 @@ torch.backends.cuda.enable_flash_sdp(True)
 torch.backends.cuda.enable_math_sdp(True)
 torch.backends.cuda.enable_mem_efficient_sdp(True)
 
+# [SPEED FIX] Enable dynamic cuDNN kernel optimization
+torch.backends.cudnn.benchmark = True
+
+# [DeepSeek Trick]: Bypass `/dev/shm` RAM limit for DDP DataLoader tensors 
+# by using the actual physical file system, drastically lowering CPU Host RAM usage for large batches.
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
+# [DeepSeek Trick]: Limit OpenCV and OpenMP CPU thread allocation per DataLoader worker 
+# preventing exponential memory explosion in Thread Stacks during DDP.
+import cv2
+cv2.setNumThreads(0)
+os.environ['OMP_NUM_THREADS'] = '1'
+
 import pytorch_lightning as pl
 from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
@@ -108,6 +122,12 @@ class GuidedDataModule(pl.LightningDataModule):
         # Use same for val/test in sanity check
         self.val_ds = BioMambaDataset(m_cfg, dataset_file=self.dataset_file, img_dir=self.img_dir, train=False)
 
+        # [ULTIMATE RAM FIX]: Freeze the Garbage Collector!
+        # This completely prevents Linux 'Copy-on-Write' from duplicating 
+        # the entire dataset object 80 times across all DataLoader workers!
+        import gc
+        gc.freeze()
+
     def train_dataloader(self):
         return torch.utils.data.DataLoader(
             self.train_ds, 
@@ -115,8 +135,8 @@ class GuidedDataModule(pl.LightningDataModule):
             shuffle=True, 
             num_workers=self.cfg.GENERAL.NUM_WORKERS,
             prefetch_factor=getattr(self.cfg.GENERAL, 'PREFETCH_FACTOR', 2),
-            persistent_workers=False, # Defense against RAM leak
-            pin_memory=False # Defense against SHM/RAM overhead
+            persistent_workers=True, # [GPU LIMIT FIX]: Keep workers alive to avoid CPU respawn starvation
+            pin_memory=True # [GPU LIMIT FIX]: Essential for 100% GPU utilization (Async PCIe DMA)
         )
         
     def val_dataloader(self):
@@ -125,7 +145,8 @@ class GuidedDataModule(pl.LightningDataModule):
             batch_size=self.cfg.TRAIN.BATCH_SIZE, 
             shuffle=False, 
             num_workers=self.cfg.GENERAL.NUM_WORKERS,
-            persistent_workers=False
+            persistent_workers=True,
+            pin_memory=True
         )
     
     def test_dataloader(self):
