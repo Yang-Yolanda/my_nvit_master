@@ -44,9 +44,10 @@ class ThreeDPWDataset(Dataset):
         else:
             self.transform = transform
 
-        self.data_list = []
+        self.data_dict = {}
+        self.data_len = 0
         self._load_index()
-        print(f"✅ [ThreeDPW] {split} 集加载完成: 共 {len(self.data_list)} 个样本")
+        print(f"✅ [ThreeDPW] {split} 集加载完成: 共 {self.data_len} 个样本")
 
     def _load_index(self):
         """扫描所有 .npz 文件并建立索引"""
@@ -55,6 +56,11 @@ class ThreeDPWDataset(Dataset):
 
         print(f"🔄 正在扫描序列文件: {self.sequence_dir}...")
         npz_files = sorted(list(self.sequence_dir.glob("*.npz")))
+        
+        image_paths = []
+        npz_paths = []
+        frame_idxs = []
+        seq_names = []
         
         for npz_file in npz_files:
             try:
@@ -73,17 +79,24 @@ class ThreeDPWDataset(Dataset):
                         img_name = f"image_{frame_idx:05d}.jpg"
                         img_path = self.image_dir / seq_name / img_name
                         
-                        self.data_list.append({
-                            'image_path': str(img_path),
-                            'npz_path': str(npz_file),
-                            'frame_idx': frame_idx,
-                            'seq_name': seq_name
-                        })
+                        image_paths.append(str(img_path))
+                        npz_paths.append(str(npz_file))
+                        frame_idxs.append(frame_idx)
+                        seq_names.append(seq_name)
             except Exception as e:
                 print(f"⚠️ 跳过损坏文件 {npz_file.name}: {e}")
+                
+        # 转化为 Numpy Array，以切断 Python 多进程 List[Dict] 引发的引用计数 (Copy-on-Write 泄漏)
+        self.data_dict = {
+            'image_path': np.array(image_paths, dtype=np.string_),
+            'npz_path': np.array(npz_paths, dtype=np.string_),
+            'frame_idx': np.array(frame_idxs, dtype=np.int32),
+            'seq_name': np.array(seq_names, dtype=np.string_)
+        }
+        self.data_len = len(frame_idxs)
 
     def __len__(self):
-        return len(self.data_list)
+        return self.data_len
 
     def _get_smpl_params(self, data: Any, idx: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, float]:
         """
@@ -123,21 +136,23 @@ class ThreeDPWDataset(Dataset):
         return global_orient, body_pose, betas, has_real_smpl
 
     def __getitem__(self, idx):
-        item = self.data_list[idx]
-        f_idx = item['frame_idx']
+        # Decode numpy strings back to python str without affecting reference counts of parent memory
+        img_path = self.data_dict['image_path'][idx].decode('utf-8')
+        npz_path = self.data_dict['npz_path'][idx].decode('utf-8')
+        f_idx = int(self.data_dict['frame_idx'][idx])
         
         # --- A. 读取图像 ---
-        img_cv2 = cv2.imread(item['image_path'])
+        img_cv2 = cv2.imread(img_path)
         if img_cv2 is None:
             # 容错：如果读图失败，递归读取下一个
-            print(f"🚨 读图失败: {item['image_path']}, 尝试下一个...")
+            print(f"🚨 读图失败: {img_path}, 尝试下一个...")
             return self.__getitem__((idx + 1) % len(self))
             
         img_cv2 = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
         img_h, img_w = img_cv2.shape[:2]
 
         # --- B. 读取并处理 NPZ 数据 ---
-        with np.load(item['npz_path']) as data:
+        with np.load(npz_path) as data:
             
             # 1. 调用适配器获取 SMPL 参数 (你的核心逻辑在这里)
             global_orient, body_pose, betas, has_smpl = self._get_smpl_params(data, f_idx)
