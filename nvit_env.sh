@@ -21,3 +21,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
 export NVIDIA_TF32_OVERRIDE=1
 # 打印完整报错日志
 export HYDRA_FULL_ERROR=1
+
+export MALLOC_ARENA_MAX=2
+export OMP_NUM_THREADS=4
+export MKL_NUM_THREADS=4
