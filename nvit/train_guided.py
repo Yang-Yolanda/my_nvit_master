@@ -14,8 +14,9 @@ import sys
 from pathlib import Path
 
 # Add 4D-Humans to path to find hmr2
-sys.path.insert(0, '/home/yangz/4D-Humans')
-sys.path.insert(0, '/home/yangz/NViT-master')
+# Assuming sibling directory: NViT-master and 4D-Humans are in the same parent folder
+sys.path.insert(0, str(root.parent / '4D-Humans'))
+sys.path.insert(0, str(root))
 
 import hydra
 import torch
@@ -110,9 +111,10 @@ class GuidedDataModule(pl.LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        # Hardcode verify paths (Production should use cfg)
-        self.dataset_file = '/home/yangz/4D-Humans/data/metadata/3dpw_test.npz'
-        self.img_dir = '/home/yangz/4D-Humans/data/3DPW'
+        # Project-relative paths
+        project_root = pyrootutils.find_root()
+        self.dataset_file = str(project_root.parent / '4D-Humans' / 'data/metadata/3dpw_test.npz')
+        self.img_dir = str(project_root.parent / '4D-Humans' / 'data/3DPW')
         
     def setup(self, stage=None):
         # Load Model Config for Dataset preprocessing

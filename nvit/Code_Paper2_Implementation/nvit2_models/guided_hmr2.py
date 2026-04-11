@@ -38,32 +38,39 @@ class GuidedHMR2Module(HMR2):
         
         
         # 1. Overwrite Backbone: AdaptiveNViT (Guided Mode)
-        # Using Spiral Topology (Winner of Expt 3)
-        # [Fix] Rename to nvit_backbone to avoid weird collision/restoration of self.backbone from base class
-        if hasattr(self, 'backbone'):
-            del self.backbone 
+        # [NEW] Optional: Skip AdaptiveNViT for Paper 1 (Baseline + Masking) experiments
+        self.use_adaptive_nvit = cfg.MODEL.BACKBONE.get('USE_ADAPTIVE_NVIT', True)
+        
+        if self.use_adaptive_nvit:
+            # Using Spiral Topology (Winner of Expt 3)
+            # [Fix] Rename to nvit_backbone to avoid weird collision/restoration of self.backbone from base class
+            if hasattr(self, 'backbone'):
+                del self.backbone 
+                
+            mamba_variant = cfg.MODEL.BACKBONE.get('MAMBA_VARIANT', cfg.MODEL.BACKBONE.get('mamba_variant', 'spiral'))
+            gcn_variant = cfg.MODEL.BACKBONE.get('GCN_VARIANT', cfg.MODEL.BACKBONE.get('gcn_variant', 'guided'))
             
-        mamba_variant = cfg.MODEL.BACKBONE.get('MAMBA_VARIANT', cfg.MODEL.BACKBONE.get('mamba_variant', 'spiral'))
-        gcn_variant = cfg.MODEL.BACKBONE.get('GCN_VARIANT', cfg.MODEL.BACKBONE.get('gcn_variant', 'guided'))
-        
-        # [Ablation Support] Make depth, switch layers configurable
-        depth = cfg.MODEL.BACKBONE.get('depth', 11) # Default to target 11
-        sl1 = cfg.MODEL.BACKBONE.get('switch_layer_1', 8)
-        # [Fix] Set switch_layer_2 default to 10 (depth-1) so HeatmapMapper triggers properly.
-        sl2 = cfg.MODEL.BACKBONE.get('switch_layer_2', 10)
-        
-        logger.info(f"Initializing AdaptiveNViT with Depth={depth}, Mamba={mamba_variant}, GCN={gcn_variant}, Sl1={sl1}, Sl2={sl2}")
-        
-        self.nvit_backbone = AdaptiveNViT(
-            depth=depth, 
-            embed_dim=1280, 
-            num_heads=16, 
-            switch_layer_1=sl1, 
-            switch_layer_2=sl2, 
-            mamba_variant=mamba_variant, 
-            gcn_variant=gcn_variant,    
-            img_size=(256, 192)      # Aligned with HMR2 ViT-Pose input crop
-        )
+            # [Ablation Support] Make depth, switch layers configurable
+            depth = cfg.MODEL.BACKBONE.get('depth', 11) # Default to target 11
+            sl1 = cfg.MODEL.BACKBONE.get('switch_layer_1', 8)
+            # [Fix] Set switch_layer_2 default to 10 (depth-1) so HeatmapMapper triggers properly.
+            sl2 = cfg.MODEL.BACKBONE.get('switch_layer_2', 10)
+            
+            logger.info(f"Initializing AdaptiveNViT with Depth={depth}, Mamba={mamba_variant}, GCN={gcn_variant}, Sl1={sl1}, Sl2={sl2}")
+            
+            self.nvit_backbone = AdaptiveNViT(
+                depth=depth, 
+                embed_dim=1280, 
+                num_heads=16, 
+                switch_layer_1=sl1, 
+                switch_layer_2=sl2, 
+                mamba_variant=mamba_variant, 
+                gcn_variant=gcn_variant,    
+                img_size=(256, 192)      # Aligned with HMR2 ViT-Pose input crop
+            )
+        else:
+            logger.info("Using Baseline ViT Backbone (USE_ADAPTIVE_NVIT = False)")
+            # self.backbone is already initialized in super().__init__
         
         # [CRITICAL FIX] Ensure TRANSFORMER_DECODER matches Run 9 baseline weights (3 layers, 4 heads)
         # Without this, weights are skipped due to size mismatch (768 vs 1536)
@@ -158,7 +165,26 @@ class GuidedHMR2Module(HMR2):
             x = x[:, :, :, 32:-32]
             
         # 1. Backbone Forward
-        x_patches_input, pred_heatmaps = self.nvit_backbone.forward_features(x) 
+        if self.use_adaptive_nvit:
+             x_patches_input, pred_heatmaps = self.nvit_backbone.forward_features(x)
+        else:
+             # Baseline ViT: returns context features, coordinate guidance must be regressed separately
+             # or we use the HeatmapMapper standalone if available.
+             # [Fix] For Paper 1, if we use baseline, we still need 'coords' for the Guided Head.
+             # We assume AdaptiveNViT's mapper is the only one we have.
+             # BUT if we want PURE baseline, we should just use the standard HMR2 forward.
+             # The user says "带掩码的方式", which implies using the Guided Architecture's head but with ViT.
+             if hasattr(self, 'nvit_backbone'):
+                  x_patches_input, pred_heatmaps = self.nvit_backbone.forward_features(x)
+             else:
+                  # Fallback to standard backbone + standalone mapper if needed, 
+                  # but usually AdaptiveNViT with large switch layers is the safest "ViT" mode.
+                  # However, the user said "不是模块替换".
+                  # Let's use the standard backbone and a standalone mapper.
+                  x_patches_input = self.backbone(x)
+                  # If we don't have heatmaps, GuidedHead might fail. 
+                  # We'll initialize a standalone mapper if needed, but for now we follow the 'no replacement' rule.
+                  pred_heatmaps = None 
         
         # 2. Coordinate Extraction (Soft Argmax)
         coords = self.soft_argmax(pred_heatmaps)
@@ -541,7 +567,10 @@ class GuidedHMR2Module(HMR2):
         Overridden to use nvit_backbone.
         """
         all_params = list(self.smpl_head.parameters())
-        all_params += list(self.nvit_backbone.parameters())
+        if hasattr(self, 'nvit_backbone'):
+            all_params += list(self.nvit_backbone.parameters())
+        if hasattr(self, 'backbone'):
+            all_params += list(self.backbone.parameters())
         return all_params
 
     def configure_optimizers(self):

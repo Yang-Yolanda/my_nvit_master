@@ -23,8 +23,9 @@ from timm.layers import Mlp, PatchEmbed
 from .mamba_utils import PatchScanMamba, BidirectionalMambaBlock, MambaBlock, AnatomicalScanMamba
 import sys
 from pathlib import Path
-# Add logic to find smpl_topology
-sys.path.append('/home/yangz/NViT-master/nvit/Code_Paper2_Implementation')
+# Add logic to find smpl_topology relative to this file
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.append(str(PROJECT_ROOT / 'nvit/Code_Paper2_Implementation'))
 from smpl_topology import get_smpl_adjacency_matrix
 
 

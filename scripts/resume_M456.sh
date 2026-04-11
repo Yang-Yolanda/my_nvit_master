@@ -1,6 +1,8 @@
 #!/bin/bash
 # Dedicated resume script for M4, M5, M6 for a few epochs.
-cd /home/yangz/NViT-master || exit 1
+# Project root detection
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$PROJECT_ROOT" || exit 1
 set -euo pipefail
 
 PIDS=()
@@ -14,7 +16,8 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-CKPT_PATH="/home/yangz/NViT-master/logs/train/runs/2026-01-21_15-28-28/checkpoints/last.ckpt"
+# CKPT_PATH="${PROJECT_ROOT}/logs/train/runs/2026-01-21_15-28-28/checkpoints/last.ckpt"
+CKPT_PATH="${HOME}/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt"
 OUT_ROOT="output/ch5_prior_compare"
 LOG_ROOT="logs/ch5_prior_compare"
 
@@ -71,10 +74,13 @@ train_method() {
     PIDS+=($!)
 }
 
+# Layers to mask (32 for VitPose-Huge)
+ALL_LAYERS="[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]"
+
 # Run simultaneously on GPU 4, 5, 6
-train_method 4 "M4" "Prior-as-Loss" "++MODEL.BACKBONE.apply_logits_mask=False ++TRAIN.LOSS_WEIGHTS.prior_loss=1.0"
-train_method 5 "M5" "Hard-Adjacency-Only" "++MODEL.BACKBONE.apply_logits_mask=True ++MODEL.BACKBONE.mask_type=hard_1hop_only"
-train_method 6 "M6" "Soft-Distance-Bias-Only" "++MODEL.BACKBONE.apply_logits_mask=True ++MODEL.BACKBONE.mask_type=soft_distance_only"
+train_method 4 "M4" "Prior-as-Loss" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++TRAIN.LOSS_WEIGHTS.HEATMAP=2.0"
+train_method 5 "M5" "Hard-Adjacency-Only" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=hard ++MASK_CONFIG.mask_layers=${ALL_LAYERS} ++MASK_CONFIG.domain=skeleton"
+train_method 6 "M6" "Soft-Distance-Bias-Only" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=${ALL_LAYERS} ++MASK_CONFIG.domain=skeleton"
 
 echo "⏳ Waiting for M4, M5, M6 to complete max_epochs=2..."
 wait

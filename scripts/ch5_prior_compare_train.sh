@@ -2,7 +2,9 @@
 # scripts/ch5_prior_compare_train.sh
 # Parallel Training Script for Chapter 5 External Paradigm Comparison (M0-M6)
 
-cd /home/yangz/NViT-master || exit 1
+# Project root detection
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$PROJECT_ROOT" || exit 1
 set -euo pipefail
 
 PIDS=()
@@ -20,7 +22,9 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-CKPT_PATH="/home/yangz/NViT-master/logs/train/runs/2026-01-21_15-28-28/checkpoints/last.ckpt"
+# CKPT_PATH="/home/yangz/NViT-master/logs/train/runs/2026-01-21_15-28-28/checkpoints/last.ckpt"
+# Use tilde for home directory to avoid hardcoding the username
+CKPT_PATH="${HOME}/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt"
 OUT_ROOT="output/ch5_prior_compare"
 LOG_ROOT="logs/ch5_prior_compare"
 
@@ -85,7 +89,7 @@ PY
     CMD="CUDA_VISIBLE_DEVICES=$GPU_ID python nvit/train_guided.py experiment=hmr_vit_transformer data=full_ext \
         ++DATASETS_CONFIG_FILE=datasets_full_ext.yaml \
         ++trainer.max_epochs=15 \
-        ++TRAIN.BATCH_SIZE=8 \
+        ++TRAIN.BATCH_SIZE=256 \
         ++TRAIN.ACCUMULATE_GRAD_BATCHES=8 \
         ++trainer.devices=1 ++trainer.precision=bf16-mixed \
         ${FINETUNE_OVERRIDE} \
@@ -136,31 +140,34 @@ PY
 # to nvit/train_guided.py / nvit2_models to support logits masking without structural replacement.
 
 # M0: NoMask (Exp0) -> GPU 0
-train_method 0 "M0" "NoMask" "++MODEL.BACKBONE.apply_logits_mask=False"
+train_method 0 "M0" "NoMask" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False"
+
+# Layers to mask (32 for VitPose-Huge)
+ALL_LAYERS="[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]"
 
 # M1: Ours-SoftMask (Exp3 mapped purely to soft mask logic) -> GPU 1
-train_method 1 "M1" "Ours-SoftMask" "++MODEL.BACKBONE.apply_logits_mask=True ++MODEL.BACKBONE.mask_type=soft"
+train_method 1 "M1" "Ours-SoftMask" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=${ALL_LAYERS}"
 
 # M2: Ours-HardMask (Exp5 mapped purely to hard mask logic) -> GPU 2
-train_method 2 "M2" "Ours-HardMask" "++MODEL.BACKBONE.apply_logits_mask=True ++MODEL.BACKBONE.mask_type=hard"
+train_method 2 "M2" "Ours-HardMask" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=hard ++MASK_CONFIG.mask_layers=${ALL_LAYERS}"
 
 echo "⏳ Waiting for Batch 1 (M0, M1, M2) to complete to avoid OOM..."
 wait
 
 # M3: Ours-Adaptive (Exp4 mapped to adaptive soft->hard) -> GPU 3
-train_method 3 "M3" "Ours-Adaptive" "++MODEL.BACKBONE.apply_logits_mask=True ++MODEL.BACKBONE.mask_type=adaptive"
+train_method 3 "M3" "Ours-Adaptive" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=adaptive ++MASK_CONFIG.mask_layers=${ALL_LAYERS}"
 
 # M4: Prior-as-Loss -> GPU 4
-train_method 4 "M4" "Prior-as-Loss" "++MODEL.BACKBONE.apply_logits_mask=False ++TRAIN.LOSS_WEIGHTS.prior_loss=1.0"
+train_method 4 "M4" "Prior-as-Loss" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++TRAIN.LOSS_WEIGHTS.HEATMAP=2.0"
 
 # M5: Hard-Adjacency-Only -> GPU 5
-train_method 5 "M5" "Hard-Adjacency-Only" "++MODEL.BACKBONE.apply_logits_mask=True ++MODEL.BACKBONE.mask_type=hard_1hop_only"
+train_method 5 "M5" "Hard-Adjacency-Only" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=hard ++MASK_CONFIG.mask_layers=${ALL_LAYERS} ++MASK_CONFIG.domain=skeleton"
 
 echo "⏳ Waiting for Batch 2 (M3, M4, M5) to complete to avoid OOM..."
 wait
 
 # M6: Soft-Distance-Bias-Only -> GPU 6
-train_method 6 "M6" "Soft-Distance-Bias-Only" "++MODEL.BACKBONE.apply_logits_mask=True ++MODEL.BACKBONE.mask_type=soft_distance_only"
+train_method 6 "M6" "Soft-Distance-Bias-Only" "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=${ALL_LAYERS} ++MASK_CONFIG.domain=skeleton"
 
 echo "🚀 M6 dispatched to GPU 6."
 echo "⏳ Waiting for Batch 3 (M6) to complete..."

@@ -712,22 +712,21 @@ class ViTDiagnosticLab:
             sub_target_values = []
 
             for t_i in active_tokens:
-                    for t_j in active_tokens:
-                        if t_i == t_j: continue # Skip diagonal (non-trivial alignment only)
-                        joints_i = token_to_joints[t_i]
-                        joints_j = token_to_joints[t_j]
-                        
-                        # Min Geodesic Dist
-                        min_geo_dist = float('inf')
-                        for j_a in joints_i:
-                            for j_b in joints_j:
-                                d = dist_matrix[j_a, j_b].item()
-                                if d < min_geo_dist: min_geo_dist = d
-                        
-                        target_val = math.exp(-(min_geo_dist**2) / (sigma**2))
-                        
-                        sub_attn_values.append(curr_attn[t_i, t_j])
-                        sub_target_values.append(target_val)
+                for t_j in active_tokens:
+                    joints_i = token_to_joints[t_i]
+                    joints_j = token_to_joints[t_j]
+                    
+                    # Min Geodesic Dist
+                    min_geo_dist = float('inf')
+                    for j_a in joints_i:
+                        for j_b in joints_j:
+                            d = dist_matrix[j_a, j_b].item()
+                            if d < min_geo_dist: min_geo_dist = d
+                    
+                    target_val = math.exp(-(min_geo_dist**2) / (sigma**2))
+                    
+                    sub_attn_values.append(curr_attn[t_i, t_j])
+                    sub_target_values.append(target_val)
             
             # 3. Compute Cosine Similarity
             if not sub_attn_values:

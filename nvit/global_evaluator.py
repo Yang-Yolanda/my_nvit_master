@@ -65,12 +65,90 @@ def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL"):
     skill.run_eval(args)
     return args.output
 
+# def run_diagnostics(ckpt_path, output_dir, gpu="0", num_batches=10, chapter="Ch4"):
+#     logger.info(f"🔬 Starting 4-Metric Scientific Diagnostics for Chapter [{chapter}]...")
+    
+#     device = torch.device(f'cuda:{gpu}')
+    
+#     # Intelligently detect architecture from checkpoint instead of hardcoding by Chapter!
+#     try:
+#         checkpoint = torch.load(ckpt_path, map_location='cpu')
+#         state_dict = checkpoint.get('state_dict', checkpoint)
+#         decpose_weight = state_dict.get('smpl_head.decpose.weight')
+#         if decpose_weight is not None and decpose_weight.shape[0] == 144:
+#             from hmr2.models.hmr2 import HMR2
+#             model = HMR2.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
+#             logger.info("Detected Legacy [144] SMPLHead in checkpoint. Loaded standard HMR2.")
+#         else:
+#             from nvit2_models.guided_hmr2 import GuidedHMR2Module
+#             model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
+#             logger.info("Detected Guided [6] SMPLHead in checkpoint. Loaded GuidedHMR2Module.")
+#     except Exception as e:
+#         logger.warning(f"Inspection failed, defaulting to GuidedHMR2Module: {e}")
+#         from nvit2_models.guided_hmr2 import GuidedHMR2Module
+#         model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
+        
+#     model.to(device)
+#     model.eval()
+    
+#     wrapper = HMR2Wrapper(model)
+#     # output_root here will be used to create [model_name] subfolder
+#     lab = ViTDiagnosticLab(wrapper, model_name="diagnostics", output_root=output_dir)
+    
+#     # Only keep 'Control' group for diagnostics
+#     lab.groups = {'Control': {'mask_layers': [], 'mode': 'none'}}
+    
+#     # 在 dataloader = ... 之前插入
+#     print("-" * 30)
+#     print(f"Dataset: {dataset_cfg.DATASET_FILE}")
+#     print(f"Keypoint List Length: {len(dataset_cfg.KEYPOINT_LIST)}")
+#     print(f"Keypoint List: {dataset_cfg.KEYPOINT_LIST}")
+
+#     # 查找 'Pelvis' 或 'Hip' 在列表中的位置
+#     try:
+#         actual_pelvis_idx = dataset_cfg.KEYPOINT_LIST.index('Pelvis')
+#         print(f"Detected Pelvis Index: {actual_pelvis_idx}")
+#     except ValueError:
+#         print("Warning: 'Pelvis' not found in Keypoint List!")
+#     print("-" * 30)
+
+
+
+#     # Load 3DPW-TEST for diagnostics
+#     cfg_eval = dataset_eval_config()
+#     dataset_cfg = cfg_eval['3DPW-TEST']
+#     dataset_cfg.defrost()
+#     dataset_cfg.DATASET_FILE = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
+#     dataset_cfg.freeze()
+    
+#     from hmr2.datasets import ImageDataset
+#     dataset = ImageDataset(
+#         cfg=model.cfg,
+#         dataset_file=dataset_cfg.DATASET_FILE,
+#         img_dir='/home/yangz/4D-Humans/data/3DPW',
+#         train=False
+#     )
+#     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=0)
+    
+#     evaluator = Evaluator(
+#         dataset_length=len(dataset),
+#         keypoint_list=dataset_cfg.KEYPOINT_LIST,
+#         pelvis_ind=39,
+#         metrics=['mode_mpjpe']
+#     )
+    
+#     lab.run_experiment(dataloader, evaluator, dataset_cfg, num_batches=num_batches)
+    
+#     # The lab results are in lab.output_dir / results.csv
+#     # We should also ensure the 4 metrics are easily accessible
+#     return str(lab.output_dir)
+
 def run_diagnostics(ckpt_path, output_dir, gpu="0", num_batches=10, chapter="Ch4"):
     logger.info(f"🔬 Starting 4-Metric Scientific Diagnostics for Chapter [{chapter}]...")
     
     device = torch.device(f'cuda:{gpu}')
     
-    # Intelligently detect architecture from checkpoint instead of hardcoding by Chapter!
+    # 1. 加载模型逻辑 (保持不变...)
     try:
         checkpoint = torch.load(ckpt_path, map_location='cpu')
         state_dict = checkpoint.get('state_dict', checkpoint)
@@ -78,33 +156,42 @@ def run_diagnostics(ckpt_path, output_dir, gpu="0", num_batches=10, chapter="Ch4
         if decpose_weight is not None and decpose_weight.shape[0] == 144:
             from hmr2.models.hmr2 import HMR2
             model = HMR2.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
-            logger.info("Detected Legacy [144] SMPLHead in checkpoint. Loaded standard HMR2.")
         else:
-            from nvit2_models.guided_hmr2 import GuidedHMR2Module
             model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
-            logger.info("Detected Guided [6] SMPLHead in checkpoint. Loaded GuidedHMR2Module.")
     except Exception as e:
         logger.warning(f"Inspection failed, defaulting to GuidedHMR2Module: {e}")
-        from nvit2_models.guided_hmr2 import GuidedHMR2Module
         model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
         
     model.to(device)
     model.eval()
     
     wrapper = HMR2Wrapper(model)
-    # output_root here will be used to create [model_name] subfolder
     lab = ViTDiagnosticLab(wrapper, model_name="diagnostics", output_root=output_dir)
-    
-    # Only keep 'Control' group for diagnostics
     lab.groups = {'Control': {'mask_layers': [], 'mode': 'none'}}
     
-    # Load 3DPW-TEST for diagnostics
+    # 2. 加载数据集配置 (关键点！)
     cfg_eval = dataset_eval_config()
     dataset_cfg = cfg_eval['3DPW-TEST']
     dataset_cfg.defrost()
     dataset_cfg.DATASET_FILE = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
     dataset_cfg.freeze()
+
+    # --- 这里是你插入的打印代码，必须放在 dataset_cfg 定义之后 ---
+    print("-" * 30)
+    print(f"Keypoint List: {dataset_cfg.KEYPOINT_LIST}")
     
+    # 【修复重点 1】动态寻找盆骨索引
+    # 你的列表是 [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 43]
+    # 43 才是真正的对齐点（H36M Pelvis），它在列表中的位置是第 13 个（索引 13）
+    try:
+        p_idx = dataset_cfg.KEYPOINT_LIST.index(43)
+        print(f"✅ Detected Pelvis (43) at List Index: {p_idx}")
+    except ValueError:
+        p_idx = 0
+        print(f"⚠️ Pelvis (43) not found, fallback to Index 0")
+    print("-" * 30)
+
+    # 3. 数据加载 (保持不变...)
     from hmr2.datasets import ImageDataset
     dataset = ImageDataset(
         cfg=model.cfg,
@@ -114,17 +201,16 @@ def run_diagnostics(ckpt_path, output_dir, gpu="0", num_batches=10, chapter="Ch4
     )
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=0)
     
+    # 【修复重点 2】把硬编码的 39 改成 p_idx
+    # 之前填 39 必崩，因为你的列表一共才 14 个元素，索引 39 越界直接触发 CUDA Assert
     evaluator = Evaluator(
         dataset_length=len(dataset),
         keypoint_list=dataset_cfg.KEYPOINT_LIST,
-        pelvis_ind=39,
+        pelvis_ind=p_idx, # <--- 改成动态索引
         metrics=['mode_mpjpe']
     )
     
     lab.run_experiment(dataloader, evaluator, dataset_cfg, num_batches=num_batches)
-    
-    # The lab results are in lab.output_dir / results.csv
-    # We should also ensure the 4 metrics are easily accessible
     return str(lab.output_dir)
 
 def summarize_results(chapter, run_name, suite_json, diag_dir, output_root):

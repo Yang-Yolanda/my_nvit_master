@@ -1,0 +1,5 @@
+Loading checkpoint: /home/yangz/NViT-master/nvit/Paper1_Diagnostics/weights/hmr2_pretrained.ckpt
+HMR2 Patch Embed Shape (ph, pw): (16, 16)
+HMR2 Grid (N_tokens): 193
+HMR2 blocks: 32
+Has CLS token: False

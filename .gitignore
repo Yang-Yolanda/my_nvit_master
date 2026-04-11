@@ -23,3 +23,5 @@ __pycache__/
 nohup.out
 *.log
 .agents/
+*.tar.gz
+*.zip

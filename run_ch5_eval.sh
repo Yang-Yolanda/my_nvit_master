@@ -13,15 +13,22 @@ CHAPTER="Ch5"
 
 # List all the directories containing your 6 (actually 7) experimental models
 # These are your 2.8G models properly soft-linked to the external drive
+# declare -a MODEL_PATHS=(
+#     "output/ch5_prior_compare/M0_NoMask/"
+#     "output/ch5_prior_compare/M1_Ours-SoftMask/"
+#     "output/ch5_prior_compare/M2_Ours-HardMask/"
+#     "output/ch5_prior_compare/M3_Ours-Adaptive/"
+#     "output/ch5_prior_compare/M4_Prior-as-Loss/"
+#     "output/ch5_prior_compare/M5_Hard-Adjacency-Only/"
+#     "output/ch5_prior_compare/M6_Soft-Distance-Bias-Only/"
+# )
+
 declare -a MODEL_PATHS=(
-    "output/ch5_prior_compare/M0_NoMask/"
-    "output/ch5_prior_compare/M1_Ours-SoftMask/"
-    "output/ch5_prior_compare/M2_Ours-HardMask/"
-    "output/ch5_prior_compare/M3_Ours-Adaptive/"
-    "output/ch5_prior_compare/M4_Prior-as-Loss/"
-    "output/ch5_prior_compare/M5_Hard-Adjacency-Only/"
-    "output/ch5_prior_compare/M6_Soft-Distance-Bias-Only/"
+    # "logs/train/runs/2026-04-07_17-28-22/"
+    "logs/train/runs/2026-04-03_08-09-28"
+    # "logs/train/runs/2026-04-06_07-42-42"
 )
+
 
 export PY=/home/yangz/.conda/envs/4D-humans/bin/python
 export PYTHONPATH=/home/yangz/NViT-master/nvit/Code_Paper2_Implementation:/home/yangz/4D-Humans:$PYTHONPATH

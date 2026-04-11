@@ -1,0 +1,6 @@
+export PROJECT_ROOT="/home/yangz/NViT-master"
+export OUTPUT_DIR="/home/yangz/NViT-master/artifacts/nvit_eval_20260407_232821"
+export DATA_ROOT_3DPW="/home/yangz/4D-Humans/hmr2_evaluation_data"
+export DATA_ROOT_H36M="/home/yangz/4D-Humans/hmr2_evaluation_data"
+export CKPT_HMR2_BASELINE="/home/yangz/NViT-master/nvit/Paper1_Diagnostics/checkpoints/ft_T2-A-H-Baseline.ckpt"
+export CKPT_OURS="/home/yangz/NViT-master/nvit/Paper1_Diagnostics/checkpoints/ft_T2-KTI-Adaptive.ckpt"

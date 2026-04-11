@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/home/yangz/NViT-master/print_backbone_evidence.py", line 8, in <module>
+    from hmr2.models.backbones.vit import ViT
+  File "/home/yangz/4D-Humans/hmr2/models/__init__.py", line 2, in <module>
+    from .hmr2 import HMR2
+  File "/home/yangz/4D-Humans/hmr2/models/hmr2.py", line 7, in <module>
+    from ..utils import SkeletonRenderer, MeshRenderer
+  File "/home/yangz/4D-Humans/hmr2/utils/__init__.py", line 5, in <module>
+    from .mesh_renderer import MeshRenderer
+  File "/home/yangz/4D-Humans/hmr2/utils/mesh_renderer.py", line 5, in <module>
+    from torchvision.utils import make_grid
+  File "/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torchvision/__init__.py", line 10, in <module>
+    from torchvision import _meta_registrations, datasets, io, models, ops, transforms, utils  # usort:skip
+  File "/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torchvision/datasets/__init__.py", line 1, in <module>
+    from ._optical_flow import FlyingChairs, FlyingThings3D, HD1K, KittiFlow, Sintel
+  File "/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torchvision/datasets/_optical_flow.py", line 12, in <module>
+    from ..io.image import decode_png, read_file
+  File "/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torchvision/io/__init__.py", line 39, in <module>
+    from .video import read_video, read_video_timestamps, write_video
+  File "/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/torchvision/io/video.py", line 16, in <module>
+    import av
+  File "/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/av/__init__.py", line 10, in <module>
+    from av.audio.codeccontext import AudioCodecContext
+  File "/home/yangz/.conda/envs/4D-humans/lib/python3.10/site-packages/av/audio/__init__.py", line 1, in <module>
+    from .frame import AudioFrame
+  File "<frozen importlib._bootstrap>", line 404, in parent
+KeyboardInterrupt

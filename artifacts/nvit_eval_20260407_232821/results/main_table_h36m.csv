@@ -1,0 +1,3 @@
+Method,Dataset,MPJPE,PA-MPJPE
+HMR2(Baseline),H36M(val_p2),187.46,124.36
+AdaptiveNViT(Ours),H36M(val_p2),219.94,166.51
