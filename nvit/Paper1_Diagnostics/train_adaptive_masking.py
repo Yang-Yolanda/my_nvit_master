@@ -1,4 +1,6 @@
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 from pathlib import Path
 import torch
@@ -7,7 +9,7 @@ from omegaconf import DictConfig, OmegaConf
 import logging
 
 # Add paths
-sys.path.insert(0, '/home/yangz/4D-Humans')
+sys.path.insert(0, str(get_humans_root()))
 sys.path.insert(0, '/home/yangz/NViT-master/nvit/Paper1_Diagnostics')
 
 from hmr2.models import load_hmr2, DEFAULT_CHECKPOINT

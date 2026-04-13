@@ -1,27 +1,28 @@
 #!/bin/bash
-# NViT Environment & Ultimate Memory Optimizations
-# Auto-activate 4D-humans environment
-conda activate 4D-humans 2>/dev/null || source activate 4D-humans 2>/dev/null
 
-# # Memory and CPU optimizations
-# export MALLOC_ARENA_MAX=2
-# export NCCL_SHM_DISABLE=1
-# export OMP_NUM_THREADS=1
-# export MKL_NUM_THREADS=1
-# export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+# [Robust Root Detection]
+# This script dynamically sets the project environment regardless of its location.
+# Source this file before running any NViT experiments: source nvit_env.sh
 
-# # Hydra Debugging
-# export HYDRA_FULL_ERROR=1
+# 1. Detect NViT-master root (the location of this script)
+export PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# 防多卡通讯爆炸
-export TORCH_NCCL_SHM_DISABLE=1
-# 防 3090 显存颗粒碎片化报错
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
-# 开三代硬件加速
-export NVIDIA_TF32_OVERRIDE=1
-# 打印完整报错日志
-export HYDRA_FULL_ERROR=1
+# 2. Detect 4D-Humans sibling root
+export HUMANS_ROOT="$( cd "$PROJECT_ROOT/.." && pwd )/4D-Humans"
 
-export MALLOC_ARENA_MAX=2
-export OMP_NUM_THREADS=4
-export MKL_NUM_THREADS=4
+if [ ! -d "$HUMANS_ROOT" ]; then
+    echo "⚠️ Warning: 4D-Humans sibling directory not found at $HUMANS_ROOT"
+    echo "Current PROJECT_ROOT: $PROJECT_ROOT"
+fi
+
+# 3. Setup PYTHONPATH
+export PYTHONPATH="$PROJECT_ROOT:$HUMANS_ROOT:$PROJECT_ROOT/nvit:$PYTHONPATH"
+
+# 4. Standardize Conda Environment (Optional)
+# export CONDA_ENV_PATH="/path/to/conda/4D-humans"
+
+# 5. Output for Verification
+echo "✅ NViT Environment Initialized"
+echo "   PROJECT_ROOT: $PROJECT_ROOT"
+echo "   HUMANS_ROOT:  $HUMANS_ROOT"
+echo "   PYTHONPATH:   ... (updated)"

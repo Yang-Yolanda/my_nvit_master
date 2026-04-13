@@ -1,14 +1,16 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import torch
 import torch.nn as nn
 from model_manager import ModelManager
 import sys
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 from pathlib import Path
 
 # Fix paths
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir))
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 
 def check_sparsity():
     checkpoint_path = '/home/yangz/NViT-master/nvit/output/hmr2_ddp_v1/checkpoint_sparsity_Global_0.2.pth'

@@ -1,7 +1,9 @@
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
-sys.path.append("/home/yangz/4D-Humans")
-sys.path.append("/home/yangz/NViT-master")
+sys.path.append(str(get_humans_root()))
+sys.path.append(str(get_project_root()))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 import json

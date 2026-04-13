@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2015-present, Facebook, Inc.
 # All rights reserved.
 """

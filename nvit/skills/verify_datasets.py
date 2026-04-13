@@ -1,11 +1,13 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 """
 Dataset Path Verification and Dataloader Sanity Check
 Tests that all configured datasets can be loaded successfully
 """
 import sys
-sys.path.insert(0, '/home/yangz/4D-Humans')
-sys.path.insert(0, '/home/yangz/NViT-master/nvit')
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
+sys.path.insert(0, str(get_humans_root()))
+sys.path.insert(0, str(get_project_root() / 'nvit'))
 
 import torch
 from pathlib import Path

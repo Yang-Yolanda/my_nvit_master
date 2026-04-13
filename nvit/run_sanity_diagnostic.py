@@ -1,4 +1,6 @@
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import torch
 import json
@@ -7,8 +9,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 # Add correct PYTHONPATH to sys.path
-sys.path.append('/home/yangz/4D-Humans')
-sys.path.append(str(Path('/home/yangz/NViT-master').resolve()))
+sys.path.append(str(get_humans_root()))
+sys.path.append(str(Path(str(get_project_root())).resolve()))
 
 from nvit2_models.guided_hmr2 import GuidedHMR2Module
 from hmr2.datasets import create_dataset
@@ -47,7 +49,7 @@ def check_anomaly_and_evaluate(out_dir):
     cfg_eval = dataset_eval_config()
     dataset_cfg = cfg_eval['3DPW-TEST']
     dataset_cfg.defrost()
-    dataset_cfg.DATASET_FILE = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
+    dataset_cfg.DATASET_FILE = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
     dataset_cfg.freeze()
     
     # Temporary mock config for creation

@@ -1,9 +1,11 @@
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import torch
 
 print("TEST EVAL START")
-humans_dir = "/home/yangz/4D-Humans"
+humans_dir = str(get_humans_root())
 if humans_dir not in sys.path: sys.path.append(humans_dir)
 nvit_dir = "/home/yangz/NViT-master/nvit"
 if nvit_dir not in sys.path: sys.path.append(nvit_dir)

@@ -1,9 +1,11 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import torch
 import torch.nn as nn
 import numpy as np
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 from pathlib import Path
 from tqdm import tqdm
@@ -11,7 +13,7 @@ from tqdm import tqdm
 # Add paths
 sys.path.append("/home/yangz/NViT-master/nvit")
 sys.path.append("/home/yangz/NViT-master/nvit/Paper1_Diagnostics/diagnostic_core")
-sys.path.append("/home/yangz/4D-Humans")
+sys.path.append(str(get_humans_root()))
 
 from diagnostic_engine import HMR2Wrapper
 from motion_diagnostic import MotionCoherenceEngine

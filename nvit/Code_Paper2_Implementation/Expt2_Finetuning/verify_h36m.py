@@ -1,11 +1,13 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import torch
 from pathlib import Path
 
 # Fix paths to allow importing hmr2
-sys.path.append("/home/yangz/4D-Humans")
+sys.path.append(str(get_humans_root()))
 
 from hmr2.configs import dataset_eval_config
 from hmr2.datasets import ImageDataset

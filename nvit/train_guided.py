@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 from typing import Optional, Tuple
 import pyrootutils
 
@@ -11,12 +11,12 @@ root = pyrootutils.setup_root(
 
 import os
 import sys
+from nvit.utils.path_utils import get_humans_root, get_project_root
 from pathlib import Path
 
-# Add 4D-Humans to path to find hmr2
-# Assuming sibling directory: NViT-master and 4D-Humans are in the same parent folder
-sys.path.insert(0, str(root.parent / '4D-Humans'))
-sys.path.insert(0, str(root))
+# Add 4D-Humans and NViT-master to path
+sys.path.insert(0, str(get_humans_root()))
+sys.path.insert(0, str(get_project_root()))
 
 import hydra
 import torch
@@ -56,6 +56,7 @@ from hmr2.utils.misc import task_wrapper, log_hyperparameters
 from bio_dataset import BioMambaDataset
 from hmr2.models import load_hmr2, DEFAULT_CHECKPOINT
 from nvit.masking_utils import MaskingPatcher
+from pathlib import Path
 
 import signal
 signal.signal(signal.SIGUSR1, signal.SIG_DFL)

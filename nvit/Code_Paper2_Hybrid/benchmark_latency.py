@@ -1,10 +1,12 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import onnxruntime as ort
 import numpy as np
 import time
 import argparse
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 
 def benchmark(model_path, name="Model", runs=100):
     if not os.path.exists(model_path):

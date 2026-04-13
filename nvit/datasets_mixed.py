@@ -1,10 +1,12 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import torch
 from torch.utils.data import ConcatDataset, IterableDataset
 from datasets_3dpw import ThreeDPWDataset
 from hmr2.datasets.image_dataset import ImageDataset as HMR2ImageDataset
 import glob
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 from pathlib import Path
 from yacs.config import CfgNode as CN
 

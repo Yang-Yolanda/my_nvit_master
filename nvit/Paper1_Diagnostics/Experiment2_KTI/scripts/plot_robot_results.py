@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import json
 import matplotlib.pyplot as plt

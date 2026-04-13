@@ -1,5 +1,7 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import cv2
 import torch
 import numpy as np
@@ -12,7 +14,7 @@ import joblib
 # Add paths
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir))
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 sys.path.append('/home/yangz/4D-Humans/PHALP-master')
 
 from model_manager import ModelManager

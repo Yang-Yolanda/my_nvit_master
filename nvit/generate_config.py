@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import torch
 import json
 import argparse

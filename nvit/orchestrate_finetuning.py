@@ -1,8 +1,10 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import argparse
 import subprocess
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 from pathlib import Path
 from masking_utils import get_experimental_groups
 

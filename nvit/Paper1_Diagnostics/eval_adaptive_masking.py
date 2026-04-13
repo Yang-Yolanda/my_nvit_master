@@ -1,10 +1,12 @@
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import torch
 import pandas as pd
 from pathlib import Path
 
-sys.path.insert(0, '/home/yangz/4D-Humans')
+sys.path.insert(0, str(get_humans_root()))
 sys.path.insert(0, '/home/yangz/NViT-master/nvit/Paper1_Diagnostics')
 
 from hmr2.models import load_hmr2, DEFAULT_CHECKPOINT
@@ -32,8 +34,8 @@ def main():
     cfg = OmegaConf.create({'TRAIN': {'BATCH_SIZE': 16, 'NUM_WORKERS': 4}, 'GENERAL': {'NUM_WORKERS': 4}})
     
     from hmr2.datasets.image_dataset import ImageDataset
-    dataset_file = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
-    img_dir = '/home/yangz/4D-Humans/data/3DPW'
+    dataset_file = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
+    img_dir = str(resolve_data_path('3DPW'))
     
     try:
         _, m_cfg = load_hmr2(DEFAULT_CHECKPOINT)

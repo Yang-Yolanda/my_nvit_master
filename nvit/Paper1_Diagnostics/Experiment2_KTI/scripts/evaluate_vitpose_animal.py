@@ -1,6 +1,8 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import torch
 import numpy as np
 import cv2
@@ -224,7 +226,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, default='nvit/Paper1_Diagnostics/Experiment2_KTI/weights/vitpose-b-ap10k.pth')
-    parser.add_argument('--image_folder', type=str, default='/home/yangz/4D-Humans/data/3DPW/imageFiles')
+    parser.add_argument('--image_folder', type=str, default=str(resolve_data_path('3DPW/imageFiles')))
     parser.add_argument('--num_samples', type=int, default=10)
     args = parser.parse_args()
     

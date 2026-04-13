@@ -1,5 +1,7 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import torch
 import numpy as np
@@ -16,7 +18,7 @@ repo_root = Path(__file__).resolve().parent.parent.parent
 diag_dir = repo_root / 'nvit/Paper1_Diagnostics'
 sys.path.append(str(diag_dir))
 sys.path.append(str(diag_dir / 'diagnostic_core'))
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 
 # Mocks
 class NamedMock(MagicMock):
@@ -115,8 +117,8 @@ def main():
     parser.add_argument('--seeds', type=int, nargs='+', default=[0, 1, 2])
     args = parser.parse_args()
 
-    dataset_file = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
-    img_dir = '/home/yangz/4D-Humans/data/3DPW'
+    dataset_file = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
+    img_dir = str(resolve_data_path('3DPW'))
     output_root = Path('outputs/diagnostics')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

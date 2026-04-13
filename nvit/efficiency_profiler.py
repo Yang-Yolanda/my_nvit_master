@@ -1,4 +1,6 @@
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import time
 import torch
@@ -12,7 +14,7 @@ warnings.filterwarnings("ignore")
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 sys.path.append(str(BASE_DIR / 'nvit'))
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 
 from yacs.config import CfgNode
 from hmr2.models import load_hmr2, DEFAULT_CHECKPOINT
@@ -84,8 +86,8 @@ def load_checkpoint_if_exists(model, g_name):
     return False
 
 def get_dataloader(batch_size=16, is_train=True):
-    dataset_file = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
-    img_dir = '/home/yangz/4D-Humans/data/3DPW'
+    dataset_file = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
+    img_dir = str(resolve_data_path('3DPW'))
     _, m_cfg = load_hmr2(DEFAULT_CHECKPOINT)
     
     if is_train:

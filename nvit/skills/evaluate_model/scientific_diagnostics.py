@@ -298,6 +298,8 @@ class CameraHMRWrapper(ModelWrapper):
              smpl_path = '/home/yangz/.cache/4DHumans/data/smpl/'
              
              import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
              if not os.path.exists(smpl_path):
                  # Fallback mechanisms
                  smpl_path = '/home/yangz/NViT-master/external_models/CameraHMR/data/models/'

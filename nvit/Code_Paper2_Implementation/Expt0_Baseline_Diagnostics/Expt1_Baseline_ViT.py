@@ -1,8 +1,10 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import torch
 import numpy as np
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Setup Paths
 NVIT_ROOT = '/home/yangz/NViT-master/nvit'
-HUMANS_DIR = '/home/yangz/4D-Humans'
+HUMANS_DIR = str(get_humans_root())
 sys.path.append(NVIT_ROOT)
 sys.path.append(HUMANS_DIR)
 sys.path.append('/home/yangz/NViT-master/nvit/Code_Paper2_Implementation')

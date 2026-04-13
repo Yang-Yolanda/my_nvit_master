@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import torch
 import numpy as np
@@ -6,13 +6,15 @@ import logging
 import pandas as pd
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import time
 from pathlib import Path
 from yacs.config import CfgNode as CN
 
 # Paths
 NVIT_ROOT = '/home/yangz/NViT-master/nvit'
-HUMANS_DIR = '/home/yangz/4D-Humans'
+HUMANS_DIR = str(get_humans_root())
 sys.path.append(NVIT_ROOT)
 sys.path.append(HUMANS_DIR)
 sys.path.append(os.getcwd())

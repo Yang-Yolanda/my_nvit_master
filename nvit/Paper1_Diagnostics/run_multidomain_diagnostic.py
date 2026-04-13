@@ -1,5 +1,7 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import torch
 import numpy as np
@@ -17,7 +19,7 @@ sys.path.append(os.path.join(repo_root, 'nvit/Paper1_Diagnostics/diagnostic_core
 sys.path.append(os.path.join(repo_root, 'nvit/Paper1_Diagnostics/Experiment2_KTI/scripts'))
 
 # External Models
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 sys.path.append(os.path.join(repo_root, 'external_models/hamer'))
 sys.path.append(os.path.join(repo_root, 'external_models/PromptHMR/pipeline/detector/ViTPose'))
 sys.path.append(os.path.join(repo_root, 'external_models/PromptHMR/pipeline/detector/ViTPose/easy_vitpose'))
@@ -73,8 +75,8 @@ def run_human_diag(device, num_samples, output_root, seed):
     from hmr2.utils import Evaluator
     
     ckpt_path = '/home/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt'
-    dataset_file = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
-    img_dir = '/home/yangz/4D-Humans/data/3DPW'
+    dataset_file = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
+    img_dir = str(resolve_data_path('3DPW'))
     
     # Patch for HMR2 config issue
     config_src = '/home/yangz/4D-Humans/model_config.yaml'

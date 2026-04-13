@@ -1,7 +1,9 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import torch
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import argparse
 from pathlib import Path
 import logging

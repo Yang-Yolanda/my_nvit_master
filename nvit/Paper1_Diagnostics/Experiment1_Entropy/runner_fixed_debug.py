@@ -1,7 +1,9 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import torch
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import argparse
 from pathlib import Path
 import logging
@@ -370,8 +372,8 @@ def run_experiment_1(args):
     dataset_cfg = dataset_eval_config()['3DPW-TEST']
     dataset = ImageDataset(
         cfg=model_cfg,
-        dataset_file='/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz',
-        img_dir='/home/yangz/4D-Humans/data/3DPW',
+        dataset_file=str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz'),
+        img_dir=str(resolve_data_path('3DPW')),
         train=False
     )
     # Experiment 1 needs enough samples for steady entropy/KTI Analysis

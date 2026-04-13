@@ -1,9 +1,11 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 
 def plot_three_stage_logic():
     base_dir = "nvit/Paper1_Diagnostics/Experiment2_KTI/results"

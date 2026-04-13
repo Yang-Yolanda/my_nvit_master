@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import torch
 from hmr2.models import load_hmr2, DEFAULT_CHECKPOINT

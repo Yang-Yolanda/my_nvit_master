@@ -1,6 +1,8 @@
 import torch
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -16,7 +18,7 @@ nvit_dir = Path("/home/yangz/NViT-master/nvit")
 sys.path.append(str(nvit_dir))
 sys.path.append(str(nvit_dir / 'Paper1_Diagnostics'))
 sys.path.append(str(nvit_dir / 'Paper1_Diagnostics' / 'diagnostic_core'))
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 
 from hmr2.configs import dataset_eval_config
 from hmr2.utils import Evaluator, recursive_to
@@ -67,8 +69,8 @@ def run_eval_for_ckpt(ckpt_path, group_tag, device, num_batches=None):
     cfg_eval = dataset_eval_config()['3DPW-TEST']
     
     # 3DPW paths
-    dataset_file = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
-    img_dir = '/home/yangz/4D-Humans/data/3DPW'
+    dataset_file = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
+    img_dir = str(resolve_data_path('3DPW'))
     
     from hmr2.datasets import ImageDataset
     dataset = ImageDataset(

@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 from typing import Optional, Tuple
 import pyrootutils
 
@@ -10,12 +10,14 @@ root = pyrootutils.setup_root(
 )
 
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 from pathlib import Path
 
 # Add 4D-Humans to path to find hmr2
-sys.path.insert(0, '/home/yangz/4D-Humans')
-sys.path.insert(0, '/home/yangz/NViT-master')
+sys.path.insert(0, str(get_humans_root()))
+sys.path.insert(0, str(get_project_root()))
 
 import hydra
 import torch
@@ -109,8 +111,8 @@ class GuidedDataModule(pl.LightningDataModule):
         super().__init__()
         self.cfg = cfg
         # Hardcode verify paths (Production should use cfg)
-        self.dataset_file = '/home/yangz/4D-Humans/data/metadata/3dpw_test.npz'
-        self.img_dir = '/home/yangz/4D-Humans/data/3DPW'
+        self.dataset_file = str(resolve_data_path('metadata/3dpw_test.npz'))
+        self.img_dir = str(resolve_data_path('3DPW'))
         
     def setup(self, stage=None):
         # Load Model Config for Dataset preprocessing

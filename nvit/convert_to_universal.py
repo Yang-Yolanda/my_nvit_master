@@ -1,5 +1,7 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import glob
 import scipy.io
@@ -111,6 +113,6 @@ def convert_mpi_inf_3dhp(source_root, target_root):
                 print(f"❌ Error processing {subj}/{seq}: {e}")
 
 if __name__ == "__main__":
-    SRC = "/home/yangz/4D-Humans/data/mpi_inf_3dhp/dataset"
-    DST = "/home/yangz/4D-Humans/data/MPI_INF_PROCESSED" # Staging area
+    SRC = str(resolve_data_path('mpi_inf_3dhp/dataset'))
+    DST = str(resolve_data_path('MPI_INF_PROCESSED')) # Staging area
     convert_mpi_inf_3dhp(SRC, DST)

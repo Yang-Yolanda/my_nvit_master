@@ -1,6 +1,8 @@
 import torch
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import argparse
 import pandas as pd
 from pathlib import Path

@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import math
 import sys
 from typing import Iterable, Optional, Dict, Union, Any

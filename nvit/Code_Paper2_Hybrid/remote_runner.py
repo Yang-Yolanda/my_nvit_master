@@ -1,7 +1,9 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import subprocess
 import sys
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import time
 
 if __name__ == "__main__":

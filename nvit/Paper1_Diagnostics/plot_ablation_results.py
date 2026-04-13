@@ -2,6 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 from pathlib import Path
 
 def plot_ablation_results():

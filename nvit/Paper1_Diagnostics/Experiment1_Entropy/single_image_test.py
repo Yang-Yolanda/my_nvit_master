@@ -1,7 +1,9 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import torch
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import argparse
 from pathlib import Path
 import logging
@@ -52,7 +54,7 @@ def run_single_image_test():
     # Actually, I'll search here.
     
     import glob
-    img_dir = '/home/yangz/4D-Humans/data/3DPW'
+    img_dir = str(resolve_data_path('3DPW'))
     candidates = glob.glob(os.path.join(img_dir, '**/*.jpg'), recursive=True)
     if not candidates:
         print("No images found in 3DPW.")

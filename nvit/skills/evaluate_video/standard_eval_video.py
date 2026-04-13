@@ -2,13 +2,15 @@
 import argparse
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import torch
 from pathlib import Path
 
 # Path setup
 sys.path.append(str(Path.cwd())) 
 sys.path.append("/home/yangz/PHALP-master")
-sys.path.append("/home/yangz/4D-Humans")
+sys.path.append(str(get_humans_root()))
 sys.path.append("/home/yangz/NViT-master/nvit/Code_Paper2_Implementation")
 
 from phalp.visualize.visualizer import Visualizer

@@ -1,6 +1,8 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import subprocess
 import sys
 import logging
@@ -35,7 +37,7 @@ class SkillBase:
             str(self.project_root),
             str(self.project_root / "nvit"),
             str(self.project_root / "nvit" / "Code_Paper2_Implementation"),
-            "/home/yangz/4D-Humans",
+            str(get_humans_root()),
         ]
         env["PYTHONPATH"] = ":".join(paths) + ":" + env.get("PYTHONPATH", "")
         return env

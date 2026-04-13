@@ -1,6 +1,8 @@
 import torch
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import argparse
 import logging
 import pandas as pd
@@ -10,7 +12,7 @@ from pathlib import Path
 curr_dir = Path(__file__).resolve().parent
 sys.path.append(str(curr_dir))
 sys.path.append(str(curr_dir / 'diagnostic_core'))
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 
 # --- Mocks for compatibility ---
 from unittest.mock import MagicMock
@@ -110,8 +112,8 @@ def load_target_model(model_name, ckpt_path=None):
     return None, None
 
 def run_diagnostics(models_to_run, num_batches=10):
-    dataset_file = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
-    img_dir = '/home/yangz/4D-Humans/data/3DPW'
+    dataset_file = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
+    img_dir = str(resolve_data_path('3DPW'))
     output_root = curr_dir / 'Experiment1_Entropy' / 'results'
     output_root.mkdir(parents=True, exist_ok=True)
 

@@ -1,8 +1,10 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 
 def plot_layer_kti(results_dir, output_path="kti_comparison.png"):
     """

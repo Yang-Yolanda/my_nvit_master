@@ -1,10 +1,12 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 """
 数据加载模块
 目标：加载和管理3DPW数据集
 """
 
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import json
 import pickle
 import numpy as np
@@ -151,5 +153,5 @@ class DataLoader:
             self.load_samples(num_samples=num_samples + 5)
         return self.samples[-num_samples:]
 
-# dataLoader = DataLoader(config={'data_root': '/home/yangz/4D-Humans/data/3DPW'})
+# dataLoader = DataLoader(config={'data_root': str(resolve_data_path('3DPW'))})
 # dataLoader.load_samples(num_samples=100)

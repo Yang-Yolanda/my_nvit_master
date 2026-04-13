@@ -1,6 +1,8 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import onnxruntime as ort
 import sys
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 
 try:
     path = '/home/yangz/NViT-master/nvit/hmr2_pruned_int8.onnx'

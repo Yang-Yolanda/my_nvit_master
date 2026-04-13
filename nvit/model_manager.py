@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import argparse
 """
 模型管理模块 - 简化版
@@ -8,6 +8,8 @@ import argparse
 import torch
 import torch.nn as nn
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 import warnings
@@ -61,7 +63,7 @@ class ModelManager:
 
     def _setup_paths(self):
         """设置Python路径"""
-        base_dir = Path('/home/yangz/4D-Humans')
+        base_dir = Path(str(get_humans_root()))
 
         try:
             from hmr2.configs import CACHE_DIR_4DHUMANS
@@ -386,8 +388,8 @@ class ModelManager:
         try:
             # Ensure 4D-Humans path
             import sys
-            if '/home/yangz/4D-Humans' not in sys.path:
-                sys.path.append('/home/yangz/4D-Humans')
+            if str(get_humans_root()) not in sys.path:
+                sys.path.append(str(get_humans_root()))
                 
             from hmr2.utils.utils_detectron2 import DefaultPredictor_Lazy
             

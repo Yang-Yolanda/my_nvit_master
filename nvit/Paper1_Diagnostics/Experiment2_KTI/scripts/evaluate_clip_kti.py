@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 """
 Evaluate KTI on CLIP Vision Transformer
 Similar to SigLIP evaluation, CLIP is a general vision model without specific topology.

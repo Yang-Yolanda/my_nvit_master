@@ -1,8 +1,10 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import argparse
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import json
 import threading
 import time
@@ -28,7 +30,7 @@ class HMR2FullExtOrchestrator(SkillBase):
         self.logger.info("🔍 Step 1: Running Data Verification for Full Ext...")
         # For full ext, we trust our manual verification of shards, but could run a check.
         # We'll just confirm the directory exists.
-        data_dir = Path("/home/yangz/4D-Humans/data/finetune_ext")
+        data_dir = Path(str(resolve_data_path('finetune_ext')))
         if not data_dir.exists():
              self.logger.error(f"Full dataset directory not found: {data_dir}")
              return False

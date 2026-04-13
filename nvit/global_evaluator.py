@@ -1,4 +1,6 @@
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import sys
 import argparse
 import torch
@@ -12,7 +14,7 @@ from tqdm import tqdm
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 sys.path.append(str(BASE_DIR / 'nvit'))
-sys.path.append('/home/yangz/4D-Humans') # 4D-Humans root
+sys.path.append(str(get_humans_root())) # 4D-Humans root
 
 from nvit.skills.evaluate_model.standard_eval import EvaluatorSkill
 from nvit.skills.evaluate_model.scientific_diagnostics import ViTDiagnosticLab, HMR2Wrapper
@@ -134,14 +136,14 @@ def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL", parent_args=
 #     cfg_eval = dataset_eval_config()
 #     dataset_cfg = cfg_eval['3DPW-TEST']
 #     dataset_cfg.defrost()
-#     dataset_cfg.DATASET_FILE = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
+#     dataset_cfg.DATASET_FILE = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
 #     dataset_cfg.freeze()
     
 #     from hmr2.datasets import ImageDataset
 #     dataset = ImageDataset(
 #         cfg=model.cfg,
 #         dataset_file=dataset_cfg.DATASET_FILE,
-#         img_dir='/home/yangz/4D-Humans/data/3DPW',
+#         img_dir=str(resolve_data_path('3DPW')),
 #         train=False
 #     )
 #     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=0)
@@ -178,7 +180,7 @@ def run_diagnostics(ckpt_path, output_root, gpu="0", run_name="Diagnostics", mod
     cfg_eval = dataset_eval_config()
     dataset_cfg = cfg_eval['3DPW-TEST']
     dataset_cfg.defrost()
-    dataset_cfg.DATASET_FILE = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
+    dataset_cfg.DATASET_FILE = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
     dataset_cfg.freeze()
 
     # --- 这里是你插入的打印代码，必须放在 dataset_cfg 定义之后 ---
@@ -201,7 +203,7 @@ def run_diagnostics(ckpt_path, output_root, gpu="0", run_name="Diagnostics", mod
     dataset = ImageDataset(
         cfg=model.cfg,
         dataset_file=dataset_cfg.DATASET_FILE,
-        img_dir='/home/yangz/4D-Humans/data/3DPW',
+        img_dir=str(resolve_data_path('3DPW')),
         train=False
     )
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=0)

@@ -4,6 +4,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 import argparse
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 from pathlib import Path
 import torch.nn.functional as F
 
@@ -322,8 +324,8 @@ def main():
         def setup(self, stage=None):
             # 1. 3DPW - Load as Map, wrap to infinite cycle
             cfg_3dpw = {k.lower(): v for k, v in self.dataset_cfg['3DPW-TEST'].items()}
-            cfg_3dpw['dataset_file'] = '/home/yangz/4D-Humans/data/metadata/3dpw_test.npz'
-            cfg_3dpw['img_dir'] = '/home/yangz/4D-Humans/data/3DPW'
+            cfg_3dpw['dataset_file'] = str(resolve_data_path('metadata/3dpw_test.npz'))
+            cfg_3dpw['img_dir'] = str(resolve_data_path('3DPW'))
             ds_3dpw = BioMambaDataset(self.m_cfg, **cfg_3dpw, train=True)
             
             def cycle_wrapper(ds):
@@ -337,7 +339,7 @@ def main():
             weights = [0.2] # Base weight for 3DPW
             
             # 2. COCO (WebDataset)
-            coco_path = "/home/yangz/4D-Humans/data/finetune_ext/coco"
+            coco_path = str(resolve_data_path('finetune_ext/coco'))
             
             # Disable SUPPRESS_BAD_POSES to avoid missing prior file
             self.m_cfg.defrost()
@@ -357,7 +359,7 @@ def main():
                 print(f"⚠️ COCO not found in {coco_path}")
 
             # 3. H36M (WebDataset - Checks for existence)
-            h36m_path = "/home/yangz/4D-Humans/data/finetune_ext/h36m"
+            h36m_path = str(resolve_data_path('finetune_ext/h36m'))
             h36m_tars = glob.glob(f"{h36m_path}/*.tar")
             if len(h36m_tars) > 5: # Threshold to ensure it's not just metadata
                 print(f"✅ Found H36M in {h36m_path}")

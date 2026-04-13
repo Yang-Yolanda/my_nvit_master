@@ -1,5 +1,7 @@
 import torch
 import sys
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 
 # Path to PromptHMR checkpoint used in config
 ckpt_path = '/home/yangz/NViT-master/external_models/PromptHMR/data/released_models/PromptHMR_v1.pth'

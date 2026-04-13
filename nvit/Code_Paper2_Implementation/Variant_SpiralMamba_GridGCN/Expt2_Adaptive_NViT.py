@@ -1,16 +1,18 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import logging
 from pathlib import Path
 
 # Setup Paths
 NVIT_ROOT = '/home/yangz/NViT-master/nvit'
-HUMANS_DIR = '/home/yangz/4D-Humans'
+HUMANS_DIR = str(get_humans_root())
 sys.path.append(NVIT_ROOT)
 sys.path.append(HUMANS_DIR)
 # Also append current dir for models import

@@ -1,7 +1,9 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import torch
 import sys
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import argparse
 from pathlib import Path
 import logging
@@ -98,7 +100,7 @@ def patched_to_tensor(x, device=None, temporary=False):
 # -------------------------------------------------
 
 # Add 4D-Humans to path
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 
 # Add diagnostic core to path
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'diagnostic_core'))

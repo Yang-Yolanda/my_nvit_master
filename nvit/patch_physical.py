@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
         # C. Save Explicitly with Sparsity Name
         save_filename = f'hmr2_pruned_sparsity_{sparsity_percent}.pth'
 

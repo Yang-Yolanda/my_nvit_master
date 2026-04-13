@@ -1,4 +1,4 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 # Copyright (c) 2015-present, Facebook, Inc.
 # All rights reserved.
 """
@@ -8,6 +8,8 @@ Mostly copy-paste from torchvision references.
 """
 import io
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 import time
 from collections import defaultdict, deque
 import datetime
@@ -15,7 +17,7 @@ import sys
 from pathlib import Path
 
 # Add 4D-Humans to path to import hmr2
-sys.path.insert(0, '/home/yangz/4D-Humans')
+sys.path.insert(0, str(get_humans_root()))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import torch

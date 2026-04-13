@@ -5,37 +5,24 @@
 # =========================================================================
 
 # Ensure we are in the correct root directory
-cd /home/yangz/NViT-master
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/nvit_env.sh"
+cd "$PROJECT_ROOT"
 
 # Define the target GPU and Chapter
 GPU_ID=0
 CHAPTER="Ch5"
 
-# List all the directories containing your 6 (actually 7) experimental models
-# These are your 2.8G models properly soft-linked to the external drive
-# declare -a MODEL_PATHS=(
-#     "output/ch5_prior_compare/M0_NoMask/"
-#     "output/ch5_prior_compare/M1_Ours-SoftMask/"
-#     "output/ch5_prior_compare/M2_Ours-HardMask/"
-#     "output/ch5_prior_compare/M3_Ours-Adaptive/"
-#     "output/ch5_prior_compare/M4_Prior-as-Loss/"
-#     "output/ch5_prior_compare/M5_Hard-Adjacency-Only/"
-#     "output/ch5_prior_compare/M6_Soft-Distance-Bias-Only/"
-# )
+# ... (MODEL_PATHS logic)
 
-declare -a MODEL_PATHS=(
-    # "logs/train/runs/2026-04-07_17-28-22/"
-    "logs/train/runs/2026-04-03_08-09-28"
-    # "logs/train/runs/2026-04-06_07-42-42"
-)
+export PY=${CONDA_PREFIX}/bin/python
+if [ ! -f "$PY" ]; then export PY=python; fi
 
+export PYTHONPATH=${PROJECT_ROOT}/nvit/Code_Paper2_Implementation:${HUMANS_ROOT}:$PYTHONPATH
 
-export PY=/home/yangz/.conda/envs/4D-humans/bin/python
-export PYTHONPATH=/home/yangz/NViT-master/nvit/Code_Paper2_Implementation:/home/yangz/4D-Humans:$PYTHONPATH
-
-# Ensure OUTPUT_DIR exists (it will be passed in from run_eval_suite_final.sh or created here)
+# Ensure OUTPUT_DIR exists
 if [ -z "${OUTPUT_DIR:-}" ]; then
-    export OUTPUT_DIR="/home/yangz/NViT-master/artifacts/nvit_eval_$(date +%Y%m%d_%H%M%S)"
+    export OUTPUT_DIR="${PROJECT_ROOT}/artifacts/nvit_eval_$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$OUTPUT_DIR"/{logs,results,configs}
 fi
 

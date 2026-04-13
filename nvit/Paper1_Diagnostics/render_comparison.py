@@ -1,4 +1,6 @@
 import os
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 
 # Set EGL for headless rendering BEFORE any other imports that might touch OpenGL
 os.environ['PYOPENGL_PLATFORM'] = 'egl'
@@ -11,7 +13,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 # Add paths
-sys.path.insert(0, '/home/yangz/4D-Humans')
+sys.path.insert(0, str(get_humans_root()))
 sys.path.insert(0, '/home/yangz/NViT-master/nvit/Paper1_Diagnostics')
 
 from hmr2.models import load_hmr2, DEFAULT_CHECKPOINT
@@ -54,8 +56,8 @@ def main():
 
     # 2. Setup Dataset & Get Image
     print(">>> Stage 2: Loading 3DPW dataset...")
-    dataset_file = '/home/yangz/4D-Humans/hmr2_evaluation_data/3dpw_test.npz'
-    img_dir = '/home/yangz/4D-Humans/data/3DPW'
+    dataset_file = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
+    img_dir = str(resolve_data_path('3DPW'))
     val_ds = ImageDataset(m_cfg, dataset_file, img_dir=img_dir, train=False)
     
     batch = val_ds[args.img_idx]

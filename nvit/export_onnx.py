@@ -1,15 +1,17 @@
-#!/home/yangz/.conda/envs/4D-humans/bin/python
+#!/usr/bin/env python
 import torch
 import torch.nn as nn
 import argparse
 import sys
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+
 from pathlib import Path
 import warnings
 
 # Add paths to ensure we can import ModelManager and 4D-Humans deps
 current_dir = Path(__file__).parent
 sys.path.append(str(current_dir))
-sys.path.append('/home/yangz/4D-Humans')
+sys.path.append(str(get_humans_root()))
 
 try:
     from model_manager import ModelManager

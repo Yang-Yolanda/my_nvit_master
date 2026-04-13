@@ -5,9 +5,11 @@ from pathlib import Path
 from nvit2_models.guided_hmr2 import GuidedHMR2Module
 from hmr2.models.hmr2 import HMR2
 
+from .path_utils import get_humans_root
+
 # Environment-aware asset roots
-FOURD_HUMANS_ROOT = "/home/yangz/4D-Humans"
-CACHE_DATA_ROOT = "/home/yangz/.cache/4DHumans"
+FOURD_HUMANS_ROOT = str(get_humans_root())
+CACHE_DATA_ROOT = os.environ.get('CACHE_DATA_ROOT', os.path.expanduser('~/.cache/4DHumans'))
 
 def patch_hmr2_config(cfg):
     """
