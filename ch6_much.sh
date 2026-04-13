@@ -13,7 +13,7 @@ export PYTHONPATH=/home/yangz/NViT-master/nvit/Code_Paper2_Implementation:/home/
 # 这是你刚才给出的路径
 CKPT_DIR="/home/yangz/NViT-master/logs/train/runs/2026-04-07_17-28-22/checkpoints"
 GPU_ID=0
-CHAPTER="Ch6"
+CHAPTER="Ch6A"
 
 # 3. 创建本次评估的输出目录
 export OUTPUT_DIR="/home/yangz/NViT-master/artifacts/eval_series_$(date +%Y%m%d_%H%M%S)"

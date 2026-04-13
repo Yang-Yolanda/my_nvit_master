@@ -120,9 +120,15 @@ class EvaluatorSkill(SkillBase):
                     with torch.no_grad():
                         out = model(batch)
                         
-                        # --- ROBUST H36M ALIGNMENT FIX (Center of all Eval Joints) ---
-                        if args.use_mean_alignment or 'H36M' in ds_name:
-                            keypoint_list = dataset_cfg.KEYPOINT_LIST
+                        # --- ROBUST JOINT ALIGNMENT & INDEXING FIX ---
+                        # Only apply mean alignment if requested AND the dataset has real 3D joints.
+                        # Dummy keypoint_list [0] will be skipped.
+                        keypoint_list = dataset_cfg.KEYPOINT_LIST
+                        max_idx = out['pred_keypoints_3d'].shape[1]
+                        
+                        is_valid_3d = len(keypoint_list) > 1 and all(0 <= idx < max_idx for idx in keypoint_list)
+                        
+                        if (args.use_mean_alignment or 'H36M' in ds_name) and is_valid_3d:
                             pred_eval_kps = out['pred_keypoints_3d'][:, keypoint_list]
                             gt_eval_kps = batch['keypoints_3d'][:, keypoint_list, :-1]
                             
@@ -133,13 +139,25 @@ class EvaluatorSkill(SkillBase):
                             out['pred_keypoints_3d'] = out['pred_keypoints_3d'] - pred_root
                             batch['keypoints_3d'][:, :, :-1] = batch['keypoints_3d'][:, :, :-1] - gt_root
 
-                            # Ensure the dummy alignment joint in Evaluator is also 0 in both
-                            out['pred_keypoints_3d'] = torch.cat([torch.zeros_like(out['pred_keypoints_3d'][:, [0]]), out['pred_keypoints_3d'][:, 1:]], dim=1)
-                            batch['keypoints_3d'][:, 0, :-1] = 0
-                            hmr2_evaluator.pelvis_ind = 0 
-                        # ---------------------------------
+                            # --- CRITICAL SAFETY FIX ---
+                            # Avoid torch.cat on GPU if possible, or ensure dimensions are strictly valid
+                            if out['pred_keypoints_3d'].shape[1] > 0:
+                                # Standard HMR2 Evaluator logic: forces Joint 0 to be the "aligned root"
+                                out['pred_keypoints_3d'][:, 0] = 0
+                                batch['keypoints_3d'][:, 0, :-1] = 0
+                                hmr2_evaluator.pelvis_ind = 0 
                         
-                        hmr2_evaluator(out, batch)
+                        # Guard the external evaluator call
+                        if ds_name in ['3DPW-TEST', 'H36M-VAL-P2'] or is_valid_3d:
+                            hmr2_evaluator(out, batch)
+                        else:
+                            # 2D Datasets usually only care about KPL2 calculated in get_metrics_dict fallback
+                            pass
+                            
+                        # Forced sync to catch errors early and prevent corrupting subsequent datasets
+                        if i % 100 == 0:
+                            torch.cuda.synchronize()
+                        # ---------------------------------
                 except Exception as e:
                     if args.skip_errors:
                         self.logger.warning(f"Error processing batch {i}: {e}. Skipping.")

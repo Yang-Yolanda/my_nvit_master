@@ -218,10 +218,12 @@ class AdaptiveNViT(nn.Module):
         patch_size=16,
         num_joints=24, # Configurable for SMPL, Robotic Arms, etc.
         mamba_variant='spiral', # [New] 'spiral' (Center-Out), 'bi', 'seq'
-        gcn_variant='grid' # [New] 'grid', 'forward', 'inverse', 'bi', 'random'
+        gcn_variant='grid', # [New] 'grid', 'forward', 'inverse', 'bi', 'random'
+        use_checkpoint=False # [NEW] Gradient Checkpointing
     ):
         super().__init__()
         self.depth = depth
+        self.use_checkpoint = use_checkpoint
         self.switch_layer_1 = switch_layer_1 
         self.switch_layer_2 = switch_layer_2 
         self.embed_dim = embed_dim
@@ -351,7 +353,11 @@ class AdaptiveNViT(nn.Module):
                 
                 self.mapped = True
                 
-            x = blk(x)
+            if self.use_checkpoint:
+                from torch.utils.checkpoint import checkpoint
+                x = checkpoint(blk, x)
+            else:
+                x = blk(x)
             
         x = self.norm(x)
         
@@ -406,6 +412,31 @@ class AdaptiveNViT(nn.Module):
     def forward(self, x):
         x_out, _ = self.forward_features(x)
         return x_out
+
+    def freeze_stages(self, stage_indices=[0]):
+        """
+        [Hardened] Undermind Rule 1.1: Structured Freezing.
+        stage_indices: [0] for ViT/Stage 1, [1] for Mamba/Stage 2, [2] for GCN/Stage 3
+        """
+        sl1, sl2 = self.switch_layer_1, self.switch_layer_2
+        for i, blk in enumerate(self.blocks):
+            freeze = False
+            if 0 in stage_indices and i < sl1: freeze = True
+            if 1 in stage_indices and sl1 <= i < sl2: freeze = True
+            if 2 in stage_indices and i >= sl2: freeze = True
+            
+            if freeze:
+                for p in blk.parameters():
+                    p.requires_grad = False
+                blk.eval()
+                logger.info(f"❄️ Froze Layer {i} ({type(blk).__name__})")
+        
+        # Also freeze embeddings if Stage 0 (ViT) is frozen
+        if 0 in stage_indices:
+            for p in self.patch_embed.parameters(): p.requires_grad = False
+            self.pos_embed.requires_grad = False
+            self.cls_token.requires_grad = False
+            logger.info("❄️ Froze Embeddings & Positional Encodings")
 
     def surgical_freeze(self, freeze_depth=0):
         """

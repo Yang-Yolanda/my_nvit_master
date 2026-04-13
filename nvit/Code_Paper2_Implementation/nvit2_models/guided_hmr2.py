@@ -58,6 +58,9 @@ class GuidedHMR2Module(HMR2):
             
             logger.info(f"Initializing AdaptiveNViT with Depth={depth}, Mamba={mamba_variant}, GCN={gcn_variant}, Sl1={sl1}, Sl2={sl2}")
             
+            # [GEOMETRY RULE 2.2]: Enable Gradient Checkpointing for High-Batch stability
+            use_checkpoint = cfg.MODEL.BACKBONE.get('USE_CHECKPOINT', False)
+            
             self.nvit_backbone = AdaptiveNViT(
                 depth=depth, 
                 embed_dim=1280, 
@@ -66,11 +69,17 @@ class GuidedHMR2Module(HMR2):
                 switch_layer_2=sl2, 
                 mamba_variant=mamba_variant, 
                 gcn_variant=gcn_variant,    
-                img_size=(256, 192)      # Aligned with HMR2 ViT-Pose input crop
+                img_size=(256, 192),      # Aligned with HMR2 ViT-Pose input crop
+                use_checkpoint=use_checkpoint
             )
+            # [Hardened] Undermind Rule 1.1: Frozen Stage 0 (ViT) to preserve pre-trained feature distribution
+            self.nvit_backbone.freeze_stages([0])
         else:
             logger.info("Using Baseline ViT Backbone (USE_ADAPTIVE_NVIT = False)")
-            # self.backbone is already initialized in super().__init__
+            # [Fix] Explicitly propagate use_checkpoint to standard backbone
+            if hasattr(self, 'backbone'):
+                self.backbone.use_checkpoint = cfg.MODEL.BACKBONE.get('USE_CHECKPOINT', False)
+                logger.info(f"Standard backbone use_checkpoint set to: {self.backbone.use_checkpoint}")
         
         # [CRITICAL FIX] Ensure TRANSFORMER_DECODER matches Run 9 baseline weights (3 layers, 4 heads)
         # Without this, weights are skipped due to size mismatch (768 vs 1536)
@@ -138,8 +147,15 @@ class GuidedHMR2Module(HMR2):
             # Map [0, 1] -> [-1, 1]
             coords = torch.stack([pred_x, pred_y], dim=-1)
             coords = coords * 2.0 - 1.0 
-            return coords
-        return None
+            
+            # [Diagnostic] Calculate Confidence and Entropy
+            # Peak Confidence = value at soft-argmax location (approximated by max value)
+            with torch.no_grad():
+                peak_conf = weights.reshape(B, J, -1).max(dim=-1)[0] # (B, J)
+                entropy = -(weights * torch.log(weights + 1e-9)).reshape(B, J, -1).sum(dim=-1) # (B, J)
+                
+            return coords, peak_conf, entropy
+        return None, None, None
 
 
     def forward_step(self, batch: dict, train: bool = False) -> dict:
@@ -187,10 +203,21 @@ class GuidedHMR2Module(HMR2):
                   pred_heatmaps = None 
         
         # 2. Coordinate Extraction (Soft Argmax)
-        coords = self.soft_argmax(pred_heatmaps)
+        coords, peak_conf, entropy = self.soft_argmax(pred_heatmaps)
         if coords is None:
             coords = torch.zeros(batch_size, 24, 2, device=x.device)
             
+        # [Ablation] Teacher Forcing logic: Swap regressed coords with GT
+        if self.cfg.TRAIN.get('TEACHER_FORCING', False) and 'keypoints_2d' in batch:
+            # HMR2 GT 2D are in [-0.5, 0.5] relative to 256x256
+            gt_coords = batch['keypoints_2d'][:, :24, :2].clone()
+            # Normalize to [-1, 1] relative to the 192x256 crop
+            # Width: 192/256 factor. Height: 256/256 factor.
+            gt_coords[:, :, 0] = gt_coords[:, :, 0] * (256.0 / 192.0) * 2.0
+            gt_coords[:, :, 1] = gt_coords[:, :, 1] * 2.0
+            coords = gt_coords
+            
+        # [Security] Log Batch Diagnostics (Rank-0 Only)
         # 3. Pass to Guided Head
         # Define x_img (for grid_sample) and x_patches (for global context)
         if x_patches_input.dim() == 4:
@@ -212,7 +239,14 @@ class GuidedHMR2Module(HMR2):
         # Prepare grid for sampling
         grid = coords.unsqueeze(1) # (B, 1, J, 2)
         
-        if hasattr(self.smpl_head, 'indexing_only') and self.smpl_head.indexing_only:
+        # [Hardening] Undermind Rule 2.2: Clamp to valid sampling range
+        # Prevents gradients from exploding due to extreme augmentations/out-of-bounds
+        grid = grid.clamp(-1.0, 1.0)
+        
+        if self.cfg.TRAIN.get('BYPASS_GUIDANCE', False):
+             # [Ablation] Manual Bypass: Use only global context
+             x_joints = torch.zeros(batch_size, 24, x_patches.shape[-1], device=x.device)
+        elif hasattr(self.smpl_head, 'indexing_only') and self.smpl_head.indexing_only:
              # Indexing Only: Use Global Features + Coordinate Guidance, no local sampled features
              x_joints = torch.zeros(batch_size, 24, x_patches.shape[-1], device=x.device)
         else:
@@ -225,6 +259,43 @@ class GuidedHMR2Module(HMR2):
         x_joints = x_joints + global_context
              
         pred_smpl_params, pred_cam, _ = self.smpl_head(x_joints, coords)
+        
+        # [Security] Log Batch Diagnostics (Rank-0 Only)
+        if self.global_step % self.cfg.GENERAL.LOG_STEPS == 0:
+            with torch.no_grad():
+                # 0. Effective Batch Size (Undermind Rule 1.1)
+                world_size = self.trainer.world_size if hasattr(self, 'trainer') else 1
+                effective_batch = batch_size * world_size
+                if self.global_step == 0:
+                    logger.info(f"🚀 [Training Start] Effective Global Batch Size: {effective_batch} ({world_size} GPUs * {batch_size})")
+
+                # 1. Coordinate Stats (Undermind Rule 2.2)
+                outside_mask = (coords < -1.0) | (coords > 1.0)
+                outside_pct = outside_mask.float().mean() * 100
+                logger.info(f"🔍 [Diag] Step {self.global_step} | Coords: Range=[{coords.min():.2f}, {coords.max():.2f}], Pre-Clamp Outside [-1,1]: {outside_pct:.2f}%")
+                
+                # 2. Keypoints Raw Stats
+                if 'keypoints_2d' in batch:
+                    raw_kp = batch['keypoints_2d'][:, :24, :2]
+                    logger.info(f"🔍 [Diag] Raw GT X-Range: [{raw_kp[:,:,0].min():.1f}, {raw_kp[:,:,0].max():.1f}]")
+                
+                # 3. Sampling Stats
+                logger.info(f"🔍 [Diag] Sampled Feats: Mean={x_joints.mean():.4f}, Std={x_joints.std():.4f}")
+                
+                # 4. Heatmap Diagnostics (Undermind Rule 3.2)
+                if peak_conf is not None:
+                    logger.info(f"🔍 [Diag] Heatmap: Conf Mean={peak_conf.mean():.4f}, Entropy Mean={entropy.mean():.4f}")
+                
+                # 5. Camera Stats
+                logger.info(f"🔍 [Diag] Cam Scale 's': Mean={pred_cam[:, 0].mean():.3f}, Translation 't': {pred_cam[:, 1:3].mean(dim=0)}")
+                
+                # 6. Weight Norm (Undermind Rule 4.1)
+                # Logs the norm of the final projection layer to monitor stability
+                if hasattr(self.smpl_head, 'transformer'):
+                    for name, param in self.smpl_head.named_parameters():
+                        if "query_embed" in name or "norm" in name:
+                             logger.info(f"🔍 [Diag] Head Norm ({name}): {param.norm():.4f}")
+                             break
         
         # 4. Store Outputs
         output = {}
@@ -319,7 +390,7 @@ class GuidedHMR2Module(HMR2):
              gt_kps_2d_adj[:, :, 0] = gt_kps_2d_adj[:, :, 0] - 32
              
              # Scale Adjusted GT 2D to Grid Space (W=12 in guided mode)
-             # W=12, H=16. 192/12 = 16. 256/16 = 16. Aspect ratio preserved.
+             # W=12, H=16. 192/12 = 16. 256/256 = 16. Aspect ratio preserved.
              scale_x = W / 192.0
              scale_y = H / 256.0
              
@@ -508,13 +579,17 @@ class GuidedHMR2Module(HMR2):
         # Only step optimizer every accumulate_grad_batches
         if (batch_idx + 1) % accumulate_grad_batches == 0:
             # [Fix] Use Lightning's native clip_gradients to properly unscale mixed-precision FP16 gradients!
-            # Manual torch.nn.utils.clip_grad_norm_ prevents the GradScaler from seeing the Inf/NaN and self-healing.
             clip_val = self.cfg.TRAIN.get('GRAD_CLIP_VAL', 0.5)
             if clip_val > 0:
                 self.clip_gradients(optimizer, gradient_clip_val=clip_val, gradient_clip_algorithm="norm")
                 
             optimizer.step()
             optimizer.zero_grad()
+        
+        # [Security] Log all loss components for online decomposition (Undermind Rule 5.1)
+        # Filter out 'loss' because it is logged manually below with different logger settings
+        self.log_dict({f'train/{k}': v for k, v in output['losses'].items() if k != 'loss'}, 
+                      prog_bar=True, logger=True, on_step=True, on_epoch=True)
         
         # Discriminator Step (Skip if no mocap)
         if self.cfg.LOSS_WEIGHTS.ADVERSARIAL > 0 and mocap_batch is not None:
@@ -561,6 +636,31 @@ class GuidedHMR2Module(HMR2):
              self.tensorboard_logging(batch, output, self.global_step, train=False)
         return output
 
+    def on_train_start(self):
+        """
+        Verify technical invariants before long-run starts.
+        """
+        logger.info("🛡️ [Invariant Check] Verifying Parameter Freezing Status...")
+        if hasattr(self, 'nvit_backbone'):
+             sl1 = self.cfg.MODEL.BACKBONE.get('switch_layer_1', 8)
+             frozen_layers = []
+             for i in range(sl1):
+                 blk = self.nvit_backbone.blocks[i]
+                 all_frozen = True
+                 for p in blk.parameters():
+                     if p.requires_grad: all_frozen = False
+                 if all_frozen: frozen_layers.append(i)
+             
+             if len(frozen_layers) == sl1:
+                 logger.info(f"✅ Success: Stage 0 (Layers 0-{sl1-1}) are FULLY FROZEN.")
+             else:
+                 logger.warning(f"⚠️ Warning: Some layers in Stage 0 are NOT frozen: {set(range(sl1)) - set(frozen_layers)}")
+        
+        # Ensure DDP Strategy is healthy
+        if self.trainer.num_devices > 1:
+             strategy = self.trainer.strategy
+             logger.info(f"🌍 DDP Active: Devices={self.trainer.num_devices}, Strategy={type(strategy).__name__}")
+
     def get_parameters(self):
         """
         Get all parameters to optimize.
@@ -576,13 +676,45 @@ class GuidedHMR2Module(HMR2):
     def configure_optimizers(self):
         """
         Setup model and discriminator Optimizers.
-        Modified to support ADVERSARIAL=0 (No Discriminator).
+        [Optimized] Using Differential LR: Head (1e-4) learns faster than Backbone (1e-5).
+        [Hardened] Excluding LN and Bias from Weight Decay.
         """
-        param_groups = [{'params': filter(lambda p: p.requires_grad, self.get_parameters()), 'lr': self.cfg.TRAIN.LR}]
+        head_lr = self.cfg.TRAIN.get('HEAD_LR', self.cfg.TRAIN.LR * 10.0) # Default to 1e-4
+        backbone_lr = self.cfg.TRAIN.LR # Default to 1e-5
+        
+        def get_parameter_groups(model_params, lr, name):
+            decay = []
+            no_decay = []
+            for name, param in model_params:
+                if not param.requires_grad:
+                    continue
+                # Hardening: Exclude LN, Bias, and Embeddings from Weight Decay
+                # Undermind Rule 2.1: Avoid decay for position/CLS tokens
+                if len(param.shape) == 1 or \
+                   name.endswith(".bias") or \
+                   "pos_embed" in name or \
+                   "cls_token" in name or \
+                   "position" in name:
+                    no_decay.append(param)
+                else:
+                    decay.append(param)
+            return [
+                {'params': decay, 'lr': lr, 'weight_decay': self.cfg.TRAIN.WEIGHT_DECAY, 'name': f'{name}_decay'},
+                {'params': no_decay, 'lr': lr, 'weight_decay': 0.0, 'name': f'{name}_no_decay'}
+            ]
 
-        optimizer = torch.optim.AdamW(params=param_groups,
-                                        # lr=self.cfg.TRAIN.LR,
-                                        weight_decay=self.cfg.TRAIN.WEIGHT_DECAY)
+        param_groups = []
+        param_groups.extend(get_parameter_groups(self.smpl_head.named_parameters(), head_lr, 'head'))
+        
+        backbone_named_params = []
+        if hasattr(self, 'nvit_backbone'):
+            backbone_named_params += list(self.nvit_backbone.named_parameters())
+        if hasattr(self, 'backbone'):
+            backbone_named_params += list(self.backbone.named_parameters())
+            
+        param_groups.extend(get_parameter_groups(backbone_named_params, backbone_lr, 'backbone'))
+
+        optimizer = torch.optim.AdamW(params=param_groups)
         
         if self.cfg.LOSS_WEIGHTS.ADVERSARIAL > 0 and hasattr(self, 'discriminator'):
             optimizer_disc = torch.optim.AdamW(params=self.discriminator.parameters(),

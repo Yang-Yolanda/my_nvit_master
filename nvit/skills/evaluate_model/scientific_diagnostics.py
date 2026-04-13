@@ -628,22 +628,25 @@ class ViTDiagnosticLab:
         B, H, N, _ = attn_map.shape
         device = attn_map.device
         sigma = 2.0 # Standard width
-        
         # Ensure Geodesic Distance Matrix is available
         if not hasattr(self, 'geo_dist_matrix'):
              try:
-                 # Lazy import / load
-                 sys.path.append(str(Path(__file__).resolve().parent.parent.parent.parent)) # Root nvit
-                 from nvit.smpl_topology import get_geodesic_distance_matrix
+                 # Robust search for smpl_topology
+                 import sys
+                 from pathlib import Path
+                 # Check standard NViT locations
+                 p2_hybrid = Path("/home/yangz/NViT-master/nvit/Code_Paper2_Hybrid")
+                 p2_impl = Path("/home/yangz/NViT-master/nvit/Code_Paper2_Implementation")
+                 if p2_hybrid.exists() and str(p2_hybrid) not in sys.path:
+                     sys.path.append(str(p2_hybrid))
+                 elif p2_impl.exists() and str(p2_impl) not in sys.path:
+                     sys.path.append(str(p2_impl))
+                 
+                 from smpl_topology import get_geodesic_distance_matrix
                  self.geo_dist_matrix = get_geodesic_distance_matrix(directed=False).to(device)
-             except ImportError:
-                 # Try backup location
-                 try:
-                     from smpl_topology import get_geodesic_distance_matrix
-                     self.geo_dist_matrix = get_geodesic_distance_matrix(directed=False).to(device)
-                 except:
-                     logger.warning("Could not import smpl_topology. Using identity fallback.")
-                     self.geo_dist_matrix = torch.eye(24, device=device)
+             except Exception as e:
+                 logger.warning(f"Could not import smpl_topology: {e}. Using identity fallback.")
+                 self.geo_dist_matrix = torch.eye(24, device=device)
         
         dist_matrix = self.geo_dist_matrix.to(device)
 

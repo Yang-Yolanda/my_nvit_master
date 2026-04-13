@@ -1,6 +1,6 @@
-import torch
 import torch.nn as nn
 from .mamba_utils import BidirectionalMambaBlock, PatchScanMamba
+from timm.models.vision_transformer import Block
 
 # Placeholder for GCN - assuming we'll implement or import a GraphConv
 class DirectedGCNBlock(nn.Module):
@@ -52,12 +52,7 @@ class AdaptiveNViT(nn.Module):
         # But simpler is to have 3 distinct stacks and "early exit" from one to the next?
         # Or a single list where each index can be instantiated as one of the types.
         
-        # For simplicity and weight loading, we might stick to a rigid structure first 
-        # but with capacity to be dynamic during forward.
-        # BUT, dynamic switching implies the ARCHITECTURE changes. 
-        # If we monitoring entropy, we are training a ViT. 
-        # If we switch to Mamba, we need Mamba weights.
-        
+        # For simplicity and weight loading, we might stick to a specific structure first.
         # Paper 2 strategy: 
         # We likely construct a "Supernet" where Layer i has both [ViT Block] and [Mamba Block].
         # OR we hardcode the transition layers based on our Paper 1 findings (Layer 12, 24) for the "Hybrid-Static" baseline.
@@ -86,9 +81,13 @@ class AdaptiveNViT(nn.Module):
         
         for i in range(total_layers):
             if i < static_switch_layers[0]:
-                # Stage 1: ViT
-                # We can use timm Block or custom
-                layer = nn.Identity() # Placeholder for ViT Block
+                # Stage 1: ViT (Undermind Rule 1: Use real blocks instead of Identity)
+                layer = Block(
+                    dim=embed_dim, 
+                    num_heads=num_heads, 
+                    mlp_ratio=4.0, 
+                    qkv_bias=True
+                )
                 layer_type = 'ViT'
             elif i < static_switch_layers[1]:
                 # Stage 2: Mamba
@@ -102,6 +101,25 @@ class AdaptiveNViT(nn.Module):
             self.layers.append(layer)
             # Tag the layer
             self.layers[-1].type = layer_type
+
+    def freeze_stages(self, stage_indices=[0]):
+        """
+        Freeze specific stages of the backbone.
+        stage_indices: [0] for ViT, [1] for Mamba, [2] for GCN
+        """
+        # Logic: layers 0..sl1 are stage 0, sl1..sl2 are stage 1
+        sl1, sl2 = self.static_switch_layers
+        for i, layer in enumerate(self.layers):
+            freeze = False
+            if 0 in stage_indices and i < sl1: freeze = True
+            if 1 in stage_indices and sl1 <= i < sl2: freeze = True
+            if 2 in stage_indices and i >= sl2: freeze = True
+            
+            if freeze:
+                for param in layer.parameters():
+                    param.requires_grad = False
+                layer.eval()
+                print(f"❄️ Froze Layer {i} ({layer.type})")
             
     def forward(self, x):
         # x: (B, N, D)

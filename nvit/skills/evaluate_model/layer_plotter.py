@@ -25,7 +25,11 @@ def generate_comparative_plots(chapter, output_base="/home/yangz/NViT-master/out
     # We walk chapter_dir. Run subdirs are 1 depth deep.
     for run_dir in chapter_dir.iterdir():
         if run_dir.is_dir():
+            # Search in 'diagnostics' subfolder or root
             json_file = run_dir / "diagnostics" / "layer_metrics_Control.json"
+            if not json_file.exists():
+                json_file = run_dir / "layer_metrics_Control.json"
+                
             if json_file.exists():
                 with open(json_file, 'r') as f:
                     try:

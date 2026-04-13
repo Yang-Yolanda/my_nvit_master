@@ -19,6 +19,22 @@ sys.path.insert(0, '/home/yangz/NViT-master')
 
 import hydra
 import torch
+torch.backends.cuda.enable_flash_sdp(True)
+torch.backends.cuda.enable_math_sdp(True)
+torch.backends.cuda.enable_mem_efficient_sdp(True)
+
+# [SPEED FIX] Enable dynamic cuDNN kernel optimization
+torch.backends.cudnn.benchmark = True
+
+# [DeepSeek Trick]: Bypass `/dev/shm` RAM limit for DDP DataLoader tensors 
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
+# [DeepSeek Trick]: Limit OpenCV and OpenMP CPU thread allocation 
+import cv2
+cv2.setNumThreads(0)
+os.environ['OMP_NUM_THREADS'] = '1'
+
 import pytorch_lightning as pl
 from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
@@ -104,6 +120,10 @@ class GuidedDataModule(pl.LightningDataModule):
         # Use same for val/test in sanity check
         self.val_ds = BioMambaDataset(m_cfg, dataset_file=self.dataset_file, img_dir=self.img_dir, train=False)
 
+        # [ULTIMATE RAM FIX]: Freeze the Garbage Collector!
+        import gc
+        gc.freeze()
+
     def train_dataloader(self):
         return torch.utils.data.DataLoader(
             self.train_ds, 
@@ -111,8 +131,8 @@ class GuidedDataModule(pl.LightningDataModule):
             shuffle=True, 
             num_workers=self.cfg.GENERAL.NUM_WORKERS,
             prefetch_factor=getattr(self.cfg.GENERAL, 'PREFETCH_FACTOR', 2),
-            persistent_workers=False, # Defense against RAM leak
-            pin_memory=False # Defense against SHM/RAM overhead
+            persistent_workers=True, # [GPU LIMIT FIX]: Keep workers alive
+            pin_memory=True # [GPU LIMIT FIX]: Essential for 100% GPU utilization
         )
         
     def val_dataloader(self):
@@ -187,7 +207,24 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         elif hasattr(model, 'backbone') and hasattr(model.backbone, 'surgical_freeze'):
             model.backbone.surgical_freeze(freeze_depth=freeze_depth)
         else:
-            log.warning("Could not find surgical_freeze method on backbone!")
+            log.info(f"Manually freezing first {freeze_depth} layers of standard backbone...")
+            # Fallback for standard HMR2 backbone
+            backbone = getattr(model, 'backbone', None)
+            if backbone is not None and hasattr(backbone, 'blocks'):
+                for i, blk in enumerate(backbone.blocks):
+                    if i < freeze_depth:
+                        for p in blk.parameters():
+                            p.requires_grad = False
+                # Also freeze patch_embed, pos_embed and last_norm
+                for p in backbone.patch_embed.parameters():
+                    p.requires_grad = False
+                backbone.pos_embed.requires_grad = False
+                if hasattr(backbone, 'last_norm'):
+                    for p in backbone.last_norm.parameters():
+                        p.requires_grad = False
+                log.info(f"Frozen standard backbone up to layer {freeze_depth} (including embeddings and last_norm)")
+            else:
+                log.warning("Could not find backbone or blocks to freeze!")
 
     # [NEW: Attention Masking (Paper 1 Baselines)]
     mask_config = cfg.get('MASK_CONFIG', None)
@@ -351,7 +388,7 @@ def main(cfg: DictConfig) -> Optional[float]:
         Path(cfg.paths.output_dir).mkdir(parents=True, exist_ok=True)
 
     # [Optimization] Enable Tensor Cores
-    torch.set_float32_matmul_precision('medium')
+    torch.set_float32_matmul_precision('high')
 
     # train the model
     train(cfg)

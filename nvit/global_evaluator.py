@@ -26,8 +26,21 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("GlobalEvaluator")
 
 def get_checkpoint(run_path):
-    """Find best.ckpt if available, else last.ckpt"""
-    ckpt_dir = Path(run_path) / "checkpoints"
+    """Find best.ckpt if available, else last.ckpt. Also supports direct .ckpt file path."""
+    path = Path(run_path)
+    if path.is_file() and path.suffix == '.ckpt':
+        return str(path), "direct_file"
+
+    ckpt_dir = path / "checkpoints"
+    # Fallback for some structures where checkpoints is not a sub-folder
+    if not ckpt_dir.exists() and path.is_dir():
+         # Check if the folder itself contains .ckpt files
+         pattern = list(path.glob("*.ckpt"))
+         if pattern:
+             latest = max(pattern, key=os.path.getmtime)
+             return str(latest), "folder_direct"
+         return None, None
+
     best_ckpt = ckpt_dir / "best.ckpt"
     last_ckpt = ckpt_dir / "last.ckpt"
     
@@ -43,7 +56,10 @@ def get_checkpoint(run_path):
             return str(latest), "latest_step"
     return None, None
 
-def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL"):
+    skill.run_eval(args)
+    return args.output
+
+def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL", parent_args=None):
     """Runs the 6 standard datasets using EvaluatorSkill"""
     logger.info(f"🚀 Starting Human Metric Suite on GPU {gpu}...")
     skill = EvaluatorSkill(gpu=gpu)
@@ -56,7 +72,7 @@ def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL"):
     args.dataset = datasets
     args.batch_size = 32
     args.num_workers = 8
-    args.limit_batches = None
+    args.limit_batches = getattr(parent_args, 'limit_batches', None)
     args.skip_errors = True
     args.use_mean_alignment = True # Critical for H3.6M
     args.data_dir = '/home/yangz/4D-Humans/hmr2_evaluation_data'
@@ -137,36 +153,25 @@ def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL"):
 #         metrics=['mode_mpjpe']
 #     )
     
-#     lab.run_experiment(dataloader, evaluator, dataset_cfg, num_batches=num_batches)
-    
-#     # The lab results are in lab.output_dir / results.csv
-#     # We should also ensure the 4 metrics are easily accessible
-#     return str(lab.output_dir)
-
-def run_diagnostics(ckpt_path, output_dir, gpu="0", num_batches=10, chapter="Ch4"):
-    logger.info(f"🔬 Starting 4-Metric Scientific Diagnostics for Chapter [{chapter}]...")
+def run_diagnostics(ckpt_path, output_root, gpu="0", run_name="Diagnostics", model=None):
+    """Scientific Diagnostics (Entropy, Rank, KTI)"""
+    logger.info(f"🔬 Starting 4-Metric Scientific Diagnostics for Chapter [Ch5]...")
     
     device = torch.device(f'cuda:{gpu}')
     
-    # 1. 加载模型逻辑 (保持不变...)
-    try:
-        checkpoint = torch.load(ckpt_path, map_location='cpu')
-        state_dict = checkpoint.get('state_dict', checkpoint)
-        decpose_weight = state_dict.get('smpl_head.decpose.weight')
-        if decpose_weight is not None and decpose_weight.shape[0] == 144:
-            from hmr2.models.hmr2 import HMR2
-            model = HMR2.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
-        else:
-            model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
-    except Exception as e:
-        logger.warning(f"Inspection failed, defaulting to GuidedHMR2Module: {e}")
-        model = GuidedHMR2Module.load_from_checkpoint(ckpt_path, strict=False, map_location=device)
+    # 1. 加载模型逻辑 (使用统一的 Path Patcher 加载器)
+    if model is None:
+        from nvit.utils.model_io import load_model_from_ckpt
+        model = load_model_from_ckpt(ckpt_path, device=device)
+    else:
+        logger.info("♻️ Reusing model instance from previous stage.")
+        model.to(device)
         
     model.to(device)
     model.eval()
     
     wrapper = HMR2Wrapper(model)
-    lab = ViTDiagnosticLab(wrapper, model_name="diagnostics", output_root=output_dir)
+    lab = ViTDiagnosticLab(wrapper, model_name=run_name, output_root=output_root)
     lab.groups = {'Control': {'mask_layers': [], 'mode': 'none'}}
     
     # 2. 加载数据集配置 (关键点！)
@@ -210,7 +215,7 @@ def run_diagnostics(ckpt_path, output_dir, gpu="0", num_batches=10, chapter="Ch4
         metrics=['mode_mpjpe']
     )
     
-    lab.run_experiment(dataloader, evaluator, dataset_cfg, num_batches=num_batches)
+    lab.run_experiment(dataloader, evaluator, dataset_cfg)
     return str(lab.output_dir)
 
 def summarize_results(chapter, run_name, suite_json, diag_dir, output_root):
@@ -234,15 +239,16 @@ def summarize_results(chapter, run_name, suite_json, diag_dir, output_root):
 
     # 2. Load Diagnostics
     # Look for the last run's metrics in diag_dir
-    diag_results_csv = Path(diag_dir) / "results.csv"
-    if diag_results_csv.exists():
-        df = pd.read_csv(diag_results_csv)
-        # We take the mean across all layers for the summary, 
-        # but the full curve is preserved in the run's folder.
-        if 'Avg_MAD' in df: summary['MAD'] = float(df['Avg_MAD'].iloc[-1])
-        if 'Avg_KTI' in df: summary['KTI'] = float(df['Avg_KTI'].iloc[-1])
-        if 'Avg_Rank' in df: summary['EffectiveRank'] = float(df['Avg_Rank'].iloc[-1])
-        if 'Avg_Entropy' in df: summary['Entropy'] = float(df['Avg_Entropy'].iloc[-1])
+    if diag_dir and os.path.exists(diag_dir):
+        diag_results_csv = Path(diag_dir) / "results.csv"
+        if diag_results_csv.exists():
+            df = pd.read_csv(diag_results_csv)
+            # We take the mean across all layers for the summary, 
+            # but the full curve is preserved in the run's folder.
+            if 'Avg_MAD' in df: summary['MAD'] = float(df['Avg_MAD'].iloc[-1])
+            if 'Avg_KTI' in df: summary['KTI'] = float(df['Avg_KTI'].iloc[-1])
+            if 'Avg_Rank' in df: summary['EffectiveRank'] = float(df['Avg_Rank'].iloc[-1])
+            if 'Avg_Entropy' in df: summary['Entropy'] = float(df['Avg_Entropy'].iloc[-1])
 
     # Save summary
     summary_file = Path(output_root) / "summary.csv"
@@ -257,37 +263,46 @@ def summarize_results(chapter, run_name, suite_json, diag_dir, output_root):
 def main():
     parser = argparse.ArgumentParser(description="NViT Global Evaluator (Ch4-Ch6)")
     parser.add_argument("--chapter", type=str, required=True, choices=['Ch4', 'Ch5', 'Ch6A', 'Ch6B'])
-    parser.add_argument("--run_path", type=str, required=True, help="Path to the training run outputs")
+    parser.add_argument("--run_path", type=str, default=None, help="Path to the training run outputs")
+    parser.add_argument("--checkpoint_path", type=str, default=None, help="Direct path to a .ckpt file")
     parser.add_argument("--gpu", type=str, default="0")
     parser.add_argument("--diag_batches", type=int, default=20)
+    parser.add_argument("--limit_batches", type=int, default=None, help="Limit number of batches per dataset for quick testing")
     parser.add_argument("--datasets", type=str, default="ALL", help="Comma-separated list of datasets or ALL")
     args = parser.parse_args()
 
-    run_name = os.path.basename(args.run_path)
+    # 1. Checkpoint Resolution
+    effective_path = args.checkpoint_path if args.checkpoint_path else args.run_path
+    if not effective_path:
+        logger.error("❌ Either --run_path or --checkpoint_path must be provided.")
+        return
+
+    run_name = os.path.basename(effective_path)
     output_root = BASE_DIR / "outputs" / "eval_global" / args.chapter / run_name
     output_root.mkdir(parents=True, exist_ok=True)
 
-    # Hard Safety Check for GPU 2/3
-    visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', "")
-    if args.gpu in ["2", "3"] or "2" in visible_devices.split(',') or "3" in visible_devices.split(','):
-        logger.error(f"❌ [GPU-VIOLATION] Attempted to use reserved GPU 2/3. Aborting evaluator.")
-        sys.exit(1)
-
-    # 1. Checkpoint Resolution
-    ckpt_path, ckpt_type = get_checkpoint(args.run_path)
+    ckpt_path, ckpt_type = get_checkpoint(effective_path)
     if not ckpt_path:
-        logger.error(f"❌ No checkpoint found in {args.run_path}")
+        logger.error(f"❌ No checkpoint found at {effective_path}")
         return
 
-    logger.info(f"🎯 Evaluating {run_name} [Chapter: {args.chapter}] using {ckpt_type} checkpoint: {ckpt_path}")
+    # 1. 加载模型 (共享实例)
+    from nvit.utils.model_io import load_model_from_ckpt
+    device = f"cuda:{args.gpu}"
+    model = load_model_from_ckpt(ckpt_path, device=device)
+    model.eval()
 
     # 2. Human Metric Suite
-    suite_json = run_human_suite(ckpt_path, output_root, gpu=args.gpu, datasets=args.datasets)
+    torch.cuda.empty_cache()
+    suite_json = run_human_suite(ckpt_path, output_root, gpu=args.gpu, datasets=args.datasets, parent_args=args)
 
-    # 3. Diagnostic Metrics (Ch6B might skip if non-human)
+    # 3. Diagnostic Metrics
+    torch.cuda.synchronize()
+    torch.cuda.empty_cache()
     diag_dir = None
-    if args.chapter != 'Ch6B':
-        diag_dir = run_diagnostics(ckpt_path, output_root, gpu=args.gpu, num_batches=args.diag_batches, chapter=args.chapter)
+    if args.chapter in ["Ch5", "Ch6A", "Ch6B"]:
+        # Pass the parent of output_root so the lab creates its own subfolder (which is output_root)
+        diag_dir = run_diagnostics(ckpt_path, output_root.parent, gpu=args.gpu, run_name=run_name, model=model)
 
     # 4. Final Aggregation
     summarize_results(args.chapter, run_name, suite_json, diag_dir, BASE_DIR / "outputs" / "eval_global" / args.chapter)

@@ -166,6 +166,10 @@ def save_configs(model_cfg: CfgNode, dataset_cfg: CfgNode, rootdir: str):
 @task_wrapper
 def train(cfg: DictConfig) -> Tuple[dict, dict]:
 
+    # [Hardened] Undermind Rule 1.1: Set seed for full reproducibility
+    seed = cfg.get('seed', 1234)
+    pl.seed_everything(seed, workers=True)
+
     # Load dataset config
     # [NEW] Allow overriding the dataset config file via Hydra (e.g. data.config_file)
     # Default is 'datasets_tar.yaml'
