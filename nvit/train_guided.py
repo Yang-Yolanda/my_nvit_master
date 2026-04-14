@@ -53,7 +53,7 @@ from hmr2.utils.pylogger import get_pylogger
 from hmr2.utils.misc import task_wrapper, log_hyperparameters
 
 # [NEW] Import BioMambaDataset for Robust Sanity Check
-from bio_dataset import BioMambaDataset
+from nvit.bio_dataset import BioMambaDataset
 from hmr2.models import load_hmr2, DEFAULT_CHECKPOINT
 from nvit.masking_utils import MaskingPatcher
 from pathlib import Path
@@ -360,7 +360,7 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     log.info("Fitting done")
 
 
-@hydra.main(version_base="1.2", config_path="/home/yangz/4D-Humans/hmr2/configs_hydra", config_name="train.yaml")
+@hydra.main(version_base="1.2", config_path=None, config_name="train")
 def main(cfg: DictConfig) -> Optional[float]:
     # [Fix] Patch missing GENERAL keys that cause InterpolationError
     # Must be done HERE before @task_wrapper (extras) touches the config

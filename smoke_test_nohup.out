@@ -1,0 +1,36 @@
+nohup: ignoring input
+/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/lib/python3.10/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Traceback (most recent call last):
+  File "/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/lib/python3.10/pathlib.py", line 1175, in mkdir
+    self._accessor.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: 'logs/train/runs/2026-04-14_04-03-15'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/lib/python3.10/pathlib.py", line 1175, in mkdir
+    self._accessor.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: 'logs/train/runs'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/lib/python3.10/pathlib.py", line 1175, in mkdir
+    self._accessor.mkdir(self, mode)
+FileNotFoundError: [Errno 2] No such file or directory: 'logs/train'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/lib/python3.10/pathlib.py", line 1179, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+  File "/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/lib/python3.10/pathlib.py", line 1179, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+  File "/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/lib/python3.10/pathlib.py", line 1179, in mkdir
+    self.parent.mkdir(parents=True, exist_ok=True)
+  File "/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/lib/python3.10/pathlib.py", line 1175, in mkdir
+    self._accessor.mkdir(self, mode)
+FileExistsError: [Errno 17] File exists: 'logs'
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
