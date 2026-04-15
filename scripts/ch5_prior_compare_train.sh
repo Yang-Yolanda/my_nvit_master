@@ -1,138 +1,122 @@
 #!/bin/bash
-# scripts/ch5_prior_compare_train.sh
-# "The Omega" Extreme Optimization (M0-M5)
-# Squeezing every bit of A100-80GB, 1TB SHM, 30 Epochs.
+# scripts/ch5_prior_compare_train.sh - Rewritten for DLC "Best Practice"
+# Reading from CPFS, Writing to OSS.
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$PROJECT_ROOT" || exit 1
-set -eo pipefail
+# --- 1. DYNAMIC ENVIRONMENT DETECTION (Sync with run_dlc_24gpu.sh) ---
+PROJ_ROOT="/cpfs_infra/shared/yangz/NViT-master"
+PARENT_DIR="$(dirname "$PROJ_ROOT")"
+cd "$PROJ_ROOT" || exit 1
 
-# --- OMEGA SYSTEM OPTIMIZATIONS ---
-# 1. Reduce VRAM fragmentation and enable segment expansion
-export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True,garbage_collection_threshold:0.8"
-# 2. Optimize CPU-GPU Communication
-export NCCL_P2P_LEVEL=NVL
-export NCCL_IB_HCA=mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7
-# 3. Transparent Huge Pages (User requested)
-export MALLOC_HUGEPAGES=1
-# 4. Standard Environment
-export HOME=/cpfs_infra/shared/yangz
-source "nvit_env.sh"
-# Ensure we use the correct Python env
-PYTHON_EXE="/cpfs_infra/shared/yangz/opt/Miniconda3/envs/4D-humans/bin/python"
+# [NEW] Automated Environment Setup: Ensure local cache symlink exists for 4D-Humans
+SHARED_CACHE="/cpfs_infra/shared/yangz/.cache/4DHumans"
+if [ ! -L "$HOME/.cache/4DHumans" ]; then
+    echo "🔗 Creating symlink: $HOME/.cache/4DHumans -> $SHARED_CACHE"
+    mkdir -p "$HOME/.cache"
+    rm -rf "$HOME/.cache/4DHumans" # Remove if it's a dead link or directory
+    ln -s "$SHARED_CACHE" "$HOME/.cache/4DHumans"
+fi
 
+export DATA_ROOT="$PROJ_ROOT/hmr2_training_data"
+PYTHON_EXE="$PARENT_DIR/opt/Miniconda3/envs/4D-humans/bin/python"
+CONFIG_DIR="$PARENT_DIR/4D-Humans/hmr2/configs_hydra"
+OUT_ROOT="/cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare"
+PROD_DATASET_CONFIG="$PROJ_ROOT/scripts/datasets_tar_prod.yaml"
+SMPL_DATA_DIR="$SHARED_CACHE/data/"
+CKPT_PATH="$SHARED_CACHE/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt"
+
+echo "🌐 Omega Dispatch Analysis (Ch5):"
+echo "🚀 Project: $PROJ_ROOT"
+echo "🚀 Data:    $DATA_ROOT"
+echo "🚀 Output:  $OUT_ROOT"
+
+# --- 2. CLUSTER PERFORMANCE & MEMORY TUNING (Sync with run_dlc_24gpu.sh) ---
+export NCCL_IB_DISABLE=0
+export NCCL_TIMEOUT=1800
+export TORCH_ALLOW_TF32_CUBLAS_OVERRIDE=1
+export PYTORCH_CUDA_ALLOC_CONF="garbage_collection_threshold:0.6"
+export TORCH_CUDNN_V8_API_ENABLED=1
+
+# --- 3. DISPATCH FUNCTION ---
 PIDS=()
-cleanup() {
-  echo "[cleanup] stopping child jobs..."
-  trap - SIGINT SIGTERM
-  for pid in "${PIDS[@]:-}"; do
-    kill -TERM "$pid" 2>/dev/null || true
-  done
-  pkill -TERM -P $$ 2>/dev/null || true
-  wait 2>/dev/null || true
-  exit 1
-}
-trap cleanup SIGINT SIGTERM
 
-CKPT_PATH="${PROJECT_ROOT}/ckpt_ch5_base.ckpt"
-OUT_ROOT="/mnt/yangz/nvit_output/ch5_prior_compare"
-LOG_ROOT="/mnt/yangz/nvit_output/ch5_prior_compare"
+dispatch_experiment() {
+    local GPU_ID=$1
+    local METHOD_ID=$2
+    local NAME=$3
+    local FREEZE=$4
+    local PHYSICAL_BS=$5
+    local ACC=$6
+    local SCALED_LR=$7
+    local OVERRIDES=$8
 
-mkdir -p $OUT_ROOT
-mkdir -p $LOG_ROOT
-
-# Training Function
-train_method() {
-    GPU_ID=$1
-    METHOD_ID=$2
-    NAME=$3
-    FREEZE=$4
-    PHYSICAL_BS=$5
-    ACC=$6
-    OVERRIDES=$7
-
-    echo "================================================================="
-    echo "🚀 OMEGA DISPATCH: $METHOD_ID ($NAME) on GPU $GPU_ID"
-    echo "🔹 Freeze: $FREEZE | Physical BS: $PHYSICAL_BS | Acc: $ACC"
-    
     DIR_NAME="${METHOD_ID}_${NAME}"
     OUT_DIR="${OUT_ROOT}/${DIR_NAME}"
-    LOG_DIR="${LOG_ROOT}/${DIR_NAME}"
+    LOG_DIR="${OUT_ROOT}/logs/${DIR_NAME}"
 
-    mkdir -p $OUT_DIR
-    mkdir -p $LOG_DIR
+    mkdir -p "$OUT_DIR"
+    mkdir -p "$LOG_DIR"
     
-    rm -f "${LOG_DIR}/RUNNING" "${LOG_DIR}/FAILED" "${LOG_DIR}/DONE"
+    echo "================================================================="
+    echo "🚀 DISPATCHING: $METHOD_ID ($NAME) on GPU $GPU_ID"
+    echo "🔹 Out: $OUT_DIR"
+    echo "================================================================="
 
-    # --- 30-EPOCH SPRINT SETTINGS ---
-    NUM_WORKERS=8        # Total 24 workers for 6 jobs (Maximum Stability)
-    PREFETCH=4           
-    MAX_EPOCHS=30
-    SCALED_LR=$7         # Passed from call
-    OVERRIDES=$8
-
-    local cmd_args=(
-        "experiment=hmr_vit_transformer"
-        "data=full_ext"
-        "++DATASETS_CONFIG_FILE=datasets_full_ext.yaml"
-        "++trainer.max_epochs=${MAX_EPOCHS}"
-        "++TRAIN.BATCH_SIZE=${PHYSICAL_BS}"
-        "++TRAIN.ACCUMULATE_GRAD_BATCHES=${ACC}"
-        "++TRAIN.LR=${SCALED_LR}"
-        "++GENERAL.NUM_WORKERS=${NUM_WORKERS}"
-        "++GENERAL.PREFETCH_FACTOR=${PREFETCH}"
-        "++FREEZE_DEPTH=${FREEZE}"
-        "++trainer.devices=1"
-        "++trainer.precision=bf16-mixed"
-        "++MODEL.BACKBONE.USE_CHECKPOINT=True"
-        "++FINETUNE_FROM=${CKPT_PATH}"
-        "++paths.output_dir=${OUT_DIR}"
-        "++GENERAL.task_name=ch5_${DIR_NAME}"
-    )
-
-    eval "local extra_args=($OVERRIDES)"
-    cmd_args+=("${extra_args[@]}")
-
-    (
-        set +e
-        echo "start_utc=$(date -u +%F_%T) host=$(hostname) gpu=${GPU_ID}" > "${LOG_DIR}/RUNNING"
-        
-        # Standard redirection, no nohup inside subshell
-        CUDA_VISIBLE_DEVICES=$GPU_ID "$PYTHON_EXE" -u nvit/train_guided.py "${cmd_args[@]}" > "${LOG_DIR}/train.log" 2>&1
-        rc=$?
-
-        rm -f "${LOG_DIR}/RUNNING"
-        if [ $rc -eq 0 ]; then
-            echo "DONE $(date -u +%F_%T)" > "${LOG_DIR}/DONE"
-        else
-            echo "FAILED (rc=$rc) $(date -u +%F_%T)" > "${LOG_DIR}/FAILED"
-        fi
-    ) &
-    # Staggered startup (20s) to prevent system overload
-    sleep 20
+    # --- EXECUTION ---
+    # 使用 nohup 彻底脱离终端，防止 SIGHUP 和 stdout IO 错误
+    # [关键修复] 必须指定 ++paths.log_dir，否则 Hydra 会让 6 个进程同时写根目录的 train_guided.log，导致 OS Errno 22 并发写入冲突！
+    CUDA_VISIBLE_DEVICES=$GPU_ID nohup "$PYTHON_EXE" -u nvit/train_guided.py \
+        --config-dir "$CONFIG_DIR" \
+        --config-name train \
+        experiment=hmr_vit_transformer \
+        data=full_ext \
+        ++DATASETS_CONFIG_FILE="$PROD_DATASET_CONFIG" \
+        ++trainer.max_epochs=30 \
+        ++TRAIN.BATCH_SIZE=$PHYSICAL_BS \
+        ++TRAIN.ACCUMULATE_GRAD_BATCHES=$ACC \
+        ++TRAIN.LR=$SCALED_LR \
+        ++GENERAL.NUM_WORKERS=8 \
+        ++GENERAL.PREFETCH_FACTOR=4 \
+        ++FREEZE_DEPTH=$FREEZE \
+        ++trainer.devices=1 \
+        ++trainer.precision="bf16-mixed" \
+        ++MODEL.BACKBONE.USE_CHECKPOINT=False \
+        ++SMPL.DATA_DIR="$SMPL_DATA_DIR" \
+        ++FINETUNE_FROM="'$CKPT_PATH'" \
+        ++paths.output_dir="$OUT_DIR" \
+        ++paths.log_dir="$LOG_DIR" \
+        ++GENERAL.task_name="ch5_${DIR_NAME}" \
+        $OVERRIDES > "${LOG_DIR}/train.log" 2>&1 &
+    
     PIDS+=($!)
+    # Staggered startup to avoid CPFS/OSS contention
+    sleep 30
 }
 
-# --- GROUP CONFIGURATION (30-Epoch Sprint) ---
-# Goal: ACC=1, MAX_BS, SCALED_LR
-# Base LR=1e-5 @ BS=48. Scaling rule: LR = 1e-5 * (BS/48)
+# --- 4. EXPERIMENT GROUP M0-M5 ---
+# Baseline LR=1e-5 @ BS=48. Scaling: LR = 1e-5 * (BS/48)
+
+# M0: Freeze 8, BS 192 (Scaled LR 4.0e-5? No, user previously asked for 8.0e-5)
+dispatch_experiment 0 "M0" "NoMask" 8 192 1 8.0e-5 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=none"
+
+# M1: Freeze 16, BS 192
+dispatch_experiment 1 "M1" "Pos16" 16 192 1 1.33e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=[16]"
+
+# M2: Freeze 24, BS 192
+dispatch_experiment 2 "M2" "Pos24" 24 192 1 1.6e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=[24]"
+
+# M3-M5: Global Masks starting at 8
 L8_PL="[8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]"
+dispatch_experiment 3 "M3" "8PlusSoft" 8 192 1 1.06e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=${L8_PL}"
+
+# Generate M4 Adaptive modes
 M4_MODES=""
 for i in {8..10}; do M4_MODES+="++MASK_CONFIG.layer_modes.$i=soft "; done
 for i in {11..31}; do M4_MODES+="++MASK_CONFIG.layer_modes.$i=hard "; done
+dispatch_experiment 4 "M4" "AdaptiveKTI" 8 192 1 1.06e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=adaptive ++MASK_CONFIG.mask_layers=${L8_PL} ${M4_MODES}"
 
-# Dispatch M0-M5
-# M0: Freeze 8, BS 384, LR 8e-5
-train_method 0 "M0" "NoMask" 8 384 1 8.0e-5 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=none"
-# M1: Freeze 16, BS 640, LR 1.33e-4
-train_method 1 "M1" "Pos16" 16 640 1 1.33e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=[16]"
-# M2: Freeze 24, BS 768, LR 1.6e-4
-train_method 2 "M2" "Pos24" 24 768 1 1.6e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=[24]"
-# M3-M5: Masking starting at 8, Freeze 8, BS 512, LR 1.06e-4
-train_method 3 "M3" "8PlusSoft" 8 512 1 1.06e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=soft ++MASK_CONFIG.mask_layers=${L8_PL}"
-train_method 4 "M4" "AdaptiveKTI" 8 512 1 1.06e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=adaptive ++MASK_CONFIG.mask_layers=${L8_PL} ${M4_MODES}"
-train_method 5 "M5" "8PlusHard" 8 512 1 1.06e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=hard ++MASK_CONFIG.mask_layers=${L8_PL}"
+# M5: Freeze 8, Hard Mask
+dispatch_experiment 5 "M5" "8PlusHard" 8 192 1 1.06e-4 "++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False ++MASK_CONFIG.mode=hard ++MASK_CONFIG.mask_layers=${L8_PL}"
 
-echo "🏁 Omega Groups M0-M5 dispatched. Monitoring performance..."
+echo "🏁 All Group Ch5 Experiments Dispatched. Monitoring..."
 wait
-echo "✨ All Omega experiments completed!"
+echo "✨ All experiments finished."

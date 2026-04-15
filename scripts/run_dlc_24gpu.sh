@@ -6,6 +6,15 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PARENT_DIR="$(dirname "$PROJECT_ROOT")"
 cd "$PROJECT_ROOT" || exit 1
 
+# [NEW] Automated Environment Setup: Ensure local cache symlink exists for 4D-Humans
+SHARED_CACHE="/cpfs_infra/shared/yangz/.cache/4DHumans"
+if [ ! -L "$HOME/.cache/4DHumans" ]; then
+    echo "🔗 Creating symlink: $HOME/.cache/4DHumans -> $SHARED_CACHE"
+    mkdir -p "$HOME/.cache"
+    rm -rf "$HOME/.cache/4DHumans" # Remove if it's a dead link or directory
+    ln -s "$SHARED_CACHE" "$HOME/.cache/4DHumans"
+fi
+
 export DATA_ROOT="$PROJECT_ROOT/hmr2_training_data"
 PYTHON_EXE="$PARENT_DIR/opt/Miniconda3/envs/4D-humans/bin/python"
 CONFIG_DIR="$PARENT_DIR/4D-Humans/hmr2/configs_hydra"
@@ -62,12 +71,16 @@ export PYTORCH_CUDA_ALLOC_CONF="garbage_collection_threshold:0.6"
 export TORCH_CUDNN_V8_API_ENABLED=1
 
 # --- 3. EXECUTION ---
+OUTPUT_DIR="/cpfs_infra/shared/yangz/NViT-master/output/ch6"
+mkdir -p "$OUTPUT_DIR"
+
 "$PYTHON_EXE" -u nvit/train_guided.py \
     --config-dir "$CONFIG_DIR" \
     --config-name train \
+    ++DATASETS_CONFIG_FILE="$PROJECT_ROOT/scripts/datasets_tar_prod.yaml" \
     experiment=hmr_vit_transformer \
     data=mix_all \
-    ++trainer.num_nodes=3 \
+    ++trainer.num_nodes=1 \
     ++trainer.devices=8 \
     ++trainer.strategy=ddp \
     ++trainer.strategy.find_unused_parameters=True \
@@ -75,13 +88,16 @@ export TORCH_CUDNN_V8_API_ENABLED=1
     ++TRAIN.BATCH_SIZE=512 \
     ++TRAIN.ACCUMULATE_GRAD_BATCHES=1 \
     ++GENERAL.NUM_WORKERS=8 \
-    ++FREEZE_DEPTH=8 \
+    ++FREEZE_DEPTH=7 \
     ++GENERAL.PREFETCH_FACTOR=2 \
     ++TRAIN.LR=2.4e-4 \
     ++LOSS_WEIGHTS.KEYPOINTS_3D=5.0 \
     ++LOSS_WEIGHTS.GLOBAL_ORIENT=5.0 \
     ++LOSS_WEIGHTS.BODY_POSE=5.0 \
-    ++MODEL.BACKBONE.USE_CHECKPOINT=True \
-    ++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=False \
+    ++SMPL.DATA_DIR=$SHARED_CACHE/data/ \
+    ++MODEL.BACKBONE.USE_CHECKPOINT=False \
+    ++MODEL.BACKBONE.USE_ADAPTIVE_NVIT=True \
     ++MASK_CONFIG.mode=none \
-    ++paths.log_dir=/mnt/yangz/nvit_output/ch6
+    ++paths.output_dir="$OUTPUT_DIR" \
+    ++paths.log_dir="$OUTPUT_DIR" \
+    ++FINETUNE_FROM="'$SHARED_CACHE/logs/train/multiruns/hmr2/0/ch6_history_ckpts/ch6_history_ckpts/epoch_epoch=05.ckpt'"

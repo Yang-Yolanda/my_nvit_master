@@ -39,6 +39,7 @@ cv2.setNumThreads(0)
 os.environ['OMP_NUM_THREADS'] = '1'
 
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -158,8 +159,11 @@ class GuidedDataModule(pl.LightningDataModule):
 @pl.utilities.rank_zero.rank_zero_only
 def save_configs(model_cfg: CfgNode, dataset_cfg: CfgNode, rootdir: str):
     """Save config files to rootdir."""
-    Path(rootdir).mkdir(parents=True, exist_ok=True)
-    OmegaConf.save(config=model_cfg, f=os.path.join(rootdir, 'model_config.yaml'))
+    try:
+        Path(rootdir).mkdir(parents=True, exist_ok=True)
+        OmegaConf.save(config=model_cfg, f=os.path.join(rootdir, 'model_config.yaml'))
+    except OSError as e:
+        log.warning(f"Failed to save configs to {rootdir} (possibly OSS mount conflict): {e}")
     # Dataset cfg is now None or simplified
     # with open(os.path.join(rootdir, 'dataset_config.yaml'), 'w') as f:
     #    f.write(dataset_cfg.dump())
@@ -202,24 +206,60 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     # [Fix] Override trainer log steps to static value to avoid broken interpolation
     cfg.trainer.log_every_n_steps = cfg.GENERAL.LOG_STEPS
 
+    # [Case-Tolerant Config Helper]
+    # Works for both Hydra (model.backbone) and YACS/Manual edits (MODEL.BACKBONE)
+    def get_sub_cfg(cfg, keys):
+        for k in keys:
+            if k in cfg and cfg[k] is not None:
+                return cfg[k]
+        return None
+
+    model_cfg = get_sub_cfg(cfg, ['model', 'MODEL'])
+    if model_cfg is None:
+        log.warning("⚠️ Model configuration not found in cfg. Using defaults.")
+        # Create a dummy one to avoid crashes, though this shouldn't happen with Hydra
+        from omegaconf import DictConfig
+        model_cfg = DictConfig({'backbone': {}, 'smpl_head': {}})
+
+    backbone_cfg = get_sub_cfg(model_cfg, ['backbone', 'BACKBONE'])
+    smpl_head_cfg = get_sub_cfg(model_cfg, ['smpl_head', 'SMPL_HEAD'])
+
     # Setup model (Using Guided HMR2)
     model = GuidedHMR2Module(cfg)
-    
-    # [NEW: Trainable Parameter Summary]
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    total_params = sum(p.numel() for p in model.parameters())
-    log.info(f"Model Parameters: Total={total_params:,} | Trainable={trainable_params:,} ({trainable_params/total_params:.1%})")
     
     # [NEW: KTI-Guided Surgical Freezing]
     freeze_depth = cfg.get('FREEZE_DEPTH', 0)
     if freeze_depth > 0:
         log.info(f"Surgically freezing first {freeze_depth} layers of backbone (ViT stage)...")
-        if hasattr(model, 'nvit_backbone') and hasattr(model.nvit_backbone, 'surgical_freeze'):
-            model.nvit_backbone.surgical_freeze(freeze_depth=freeze_depth)
-        elif hasattr(model, 'backbone') and hasattr(model.backbone, 'surgical_freeze'):
-            model.backbone.surgical_freeze(freeze_depth=freeze_depth)
+        # Find the backbone container
+        bb = getattr(model, 'nvit_backbone', getattr(model, 'backbone', None))
+        
+        if bb is not None:
+            if hasattr(bb, 'surgical_freeze'):
+                # Use class-specific fine-grained freezing first
+                bb.surgical_freeze(freeze_depth=freeze_depth)
+            elif hasattr(bb, 'blocks'):
+                # Universal fallback: traverse standard transformer blocks
+                log.info(f"Applying universal block-level freeze to {type(bb).__name__}")
+                # 1. Freeze embeddings to maintain pre-trained feature distribution
+                for p_name, p in bb.named_parameters():
+                    if any(x in p_name for x in ['patch_embed', 'pos_embed', 'cls_token']):
+                        p.requires_grad = False
+                # 2. Freeze blocks up to specified depth
+                for i, blk in enumerate(bb.blocks):
+                    if i < freeze_depth:
+                        for p in blk.parameters(): p.requires_grad = False
+                        log.info(f"❄️  [Manual] Layer {i} FROZEN")
+            else:
+                log.warning(f"Backbone found but has no '.blocks' or 'surgical_freeze'. Unsafe to freeze depth {freeze_depth}.")
         else:
-            log.warning("Could not find surgical_freeze method on backbone!")
+            log.error("CRITICAL: No backbone found in model. Freezing failed.")
+
+    # [NEW: Trainable Parameter Summary]
+    # Moved AFTER freezing/masking to accurately reflect training scale.
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total_params = sum(p.numel() for p in model.parameters())
+    log.info(f"Model Parameters: Total={total_params:,} | Trainable={trainable_params:,} ({trainable_params/total_params:.1%})")
 
     # [NEW: Attention Masking (Paper 1 Baselines)]
     mask_config = cfg.get('MASK_CONFIG', None)
@@ -242,21 +282,45 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     logger = TensorBoardLogger(os.path.join(cfg.paths.output_dir, 'tensorboard'), name='', version='', default_hp_metric=False)
     loggers = [logger]
 
+    # Setup Checkpoint Wrapper to allow multiple ModelCheckpoint instances
+    class UniqueModelCheckpoint(ModelCheckpoint):
+        def __init__(self, *args, **kwargs):
+            self._state_key = kwargs.pop('state_key', None)
+            super().__init__(*args, **kwargs)
+        @property
+        def state_key(self) -> str:
+            return self._state_key if self._state_key else super().state_key
+
     # Setup checkpoint saving
-    # The user explicitly wants to save every single epoch without evaluating metrics.
-    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+    # [Optimized Checkpointing Strategy]
+    # 1. Weights-only snapshot for every epoch - for archive/evaluation (approx 1.3GB)
+    weights_only_callback = UniqueModelCheckpoint(
+        state_key='weights',
+        dirpath=os.path.join(cfg.paths.output_dir, 'checkpoints'), 
+        save_weights_only=True,
+        save_top_k=-1,            # Save every epoch
+        every_n_epochs=1,
+        filename='epoch_{epoch:02d}', 
+        monitor=None,
+    )
+    
+    # 2. Master Resumption Node - contains Optimizer States for "Perfect Resume" (approx 2.5GB+)
+    # Updates 'last.ckpt' at the end of every epoch.
+    last_state_callback = UniqueModelCheckpoint(
+        state_key='last',
         dirpath=os.path.join(cfg.paths.output_dir, 'checkpoints'), 
         save_last=True,
-        save_top_k=-1,            # Save everything
-        every_n_epochs=1,         # Save strictly by Epoch
-        filename='epoch_{epoch:02d}', # Name according to User request
-        monitor=None,             # Do NOT monitor any metrics for early stopping or selection
-        save_on_train_epoch_end=True  # [CRITICAL] Force saving at the end of training loop since Validation is disabled
+        save_top_k=0,             # Only keep 'last.ckpt'
+        every_n_epochs=1,
+        monitor=None,
     )
-    lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
+
+    lr_monitor = LearningRateMonitor(logging_interval='step')
     health_monitor = SystemHealthMonitor(log_interval=30)
+    
     callbacks = [
-        checkpoint_callback, 
+        weights_only_callback, 
+        last_state_callback,
         lr_monitor,
         health_monitor,
     ]
@@ -271,6 +335,12 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     trainer_cfg['check_val_every_n_epoch'] = None
     trainer_cfg['num_sanity_val_steps'] = 0
     
+    # [Fix] Enforce an Epoch boundary for Infinite DataLoaders
+    # The WebDataset inherently amplifies its with_epoch() counter by num_workers and num_nodes.
+    # We must enforce a hard limit on batches per epoch so epochs remain a reasonable conceptual unit.
+    if 'limit_train_batches' not in trainer_cfg and 'CHECKPOINT_STEPS' in cfg.GENERAL:
+        trainer_cfg['limit_train_batches'] = cfg.GENERAL.CHECKPOINT_STEPS
+        
     # [Autonomous Mode] Dynamic Device Configuration
     if 'devices' not in trainer_cfg:
         trainer_cfg['devices'] = 1
@@ -313,17 +383,34 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         # Filter state_dict to handle size mismatches and name changes
         model_state_dict = model.state_dict()
         filtered_state_dict = {}
+        # [Crucial Fix] Enhanced Weight Mapping for Hybrid Architecture
+        # Account for '.block' nesting introduced by ViTBlock/Mamba wrappers in AdaptiveNViT
+        is_hybrid = hasattr(model, 'nvit_backbone')
         for k, v in state_dict.items():
-            # Handle backbone -> nvit_backbone mapping
+            # 1. Base mapping: backbone -> nvit_backbone (Only for Hybrid models)
             k_new = k
-            if k.startswith('backbone.'):
+            if is_hybrid and k.startswith('backbone.'):
                 k_new = k.replace('backbone.', 'nvit_backbone.', 1)
             
+                # 2. Block-level nesting fix
+                # Converts 'nvit_backbone.blocks.0.norm1' to 'nvit_backbone.blocks.0.block.norm1'
+                if 'blocks.' in k_new and '.block.' not in k_new:
+                    parts = k_new.split('.')
+                    try:
+                        idx = parts.index('blocks')
+                        # If we have blocks.N.item, insert 'block' after N
+                        if idx + 1 < len(parts) and parts[idx+1].isdigit():
+                            parts.insert(idx + 2, 'block')
+                            k_new = '.'.join(parts)
+                    except (ValueError, IndexError):
+                        pass
+            
+            # 3. Shape validation and filtering
             if k_new in model_state_dict:
                 if v.shape == model_state_dict[k_new].shape:
                     filtered_state_dict[k_new] = v
                 else:
-                    log.warning(f"Skipping {k_new} due to size mismatch: {v.shape} vs {model_state_dict[k_new].shape}")
+                    log.warning(f"Shape mismatch for {k_new}: CKPT {v.shape} vs MODEL {model_state_dict[k_new].shape}. Skipping.")
             else:
                 log.debug(f"Skipping {k} (not in model)")
         
@@ -335,21 +422,20 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         if match_rate < 0.20:
             raise RuntimeError(f"Weight mapping failed: {match_rate:.2%} Match Rate is below 20% threshold! Missing: {len(missing)}.")
 
-    # [Fix] Configure ckpt_path.
-    # - If cfg.ckpt_path is explicitly set (e.g. via run_full_ddp.sh --resume), use it.
-    # - If not set, auto-detect last.ckpt in checkpoint directory.
-    # - If nothing found, start fresh (ckpt_path=None).
+    # [Fix] Configure ckpt_path for "Perfect Resumption" (断点重训)
+    # Priority: 1. Command line explicit path | 2. Auto-detected last.ckpt | 3. Fresh start
     explicit_ckpt = cfg.get('ckpt_path', None)
     if explicit_ckpt is not None and explicit_ckpt != 'null':
+        log.info(f"Using explicitly provided checkpoint for resumption: {explicit_ckpt}")
         ckpt_path_to_use = explicit_ckpt
     else:
-        # Auto-detect last.ckpt
+        # Auto-detect last.ckpt in the output directory
         auto_last = os.path.join(cfg.paths.output_dir, 'checkpoints', 'last.ckpt')
         if os.path.isfile(auto_last):
-            log.info(f"Auto-resuming from last checkpoint: {auto_last}")
+            log.info(f"✨ Auto-resuming from Master Resumption Node: {auto_last}")
             ckpt_path_to_use = auto_last
         else:
-            log.info("No checkpoint found. Starting fresh run.")
+            log.info("No matching 'last.ckpt' found. Starting fresh run.")
             ckpt_path_to_use = None
     
     log.info(f"Trainer Max Steps: {trainer.max_steps}")
@@ -360,7 +446,7 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     log.info("Fitting done")
 
 
-@hydra.main(version_base="1.2", config_path=None, config_name="train")
+@hydra.main(version_base="1.2", config_path="../../4D-Humans/hmr2/configs", config_name="train")
 def main(cfg: DictConfig) -> Optional[float]:
     # [Fix] Patch missing GENERAL keys that cause InterpolationError
     # Must be done HERE before @task_wrapper (extras) touches the config

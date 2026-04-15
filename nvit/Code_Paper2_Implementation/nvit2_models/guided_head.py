@@ -100,12 +100,25 @@ class GuidedSMPLHead(nn.Module):
         # 1. Learnable Static Queries
         self.joint_queries = nn.Parameter(torch.randn(1, self.num_joints, self.dim))
         
-        # [NEW] Learnable Guidance Scale
-        self.guidance_scale = nn.Parameter(torch.ones(1) * 0.1) 
+        # [Case-Tolerant Setup]
+        def get_sub_cfg(c, keys):
+            for k in keys:
+                if k in c and c[k] is not None:
+                    return c[k]
+            return None
+
+        self.model_cfg = get_sub_cfg(cfg, ['model', 'MODEL'])
+        if self.model_cfg is None:
+             from omegaconf import DictConfig
+             self.model_cfg = DictConfig({'backbone': {}, 'smpl_head': {}})
         
+        self.smpl_head_cfg = get_sub_cfg(self.model_cfg, ['smpl_head', 'SMPL_HEAD'])
+
         # [Ablation Flags]
-        self.heatmap_only = cfg.MODEL.get('heatmap_only', False)
-        self.indexing_only = cfg.MODEL.get('indexing_only', False)
+        self.heatmap_only = self.model_cfg.get('heatmap_only', False)
+        self.indexing_only = self.model_cfg.get('indexing_only', False)
+        self.guidance_scale = (self.smpl_head_cfg.get('guidance_scale', 1.0) 
+                              if self.smpl_head_cfg else 1.0)
 
         # 2. Coordinate Encoder (Fourier PE + Projection)
         self.pe_2d = PositionalEncoding2D(self.dim // 4) # 256 dims of sine/cosine
@@ -118,20 +131,23 @@ class GuidedSMPLHead(nn.Module):
         # 3. Transformer Decoder
         # Depth=2? 3? HMR2 uses 6? Let's check config. 
         # Default to 3 for speed in debug, or match HMR2.
-        decoder_depth = cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER.depth
-        decoder_heads = cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER.heads
-        decoder_mlp_dim = cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER.mlp_dim
+        decoder_cfg = get_sub_cfg(self.smpl_head_cfg, ['TRANSFORMER_DECODER', 'transformer_decoder']) if self.smpl_head_cfg else None
+        
+        decoder_depth = decoder_cfg.depth if decoder_cfg else 3
+        decoder_heads = decoder_cfg.heads if decoder_cfg else 4
+        decoder_mlp_dim = decoder_cfg.mlp_dim if decoder_cfg else 1024
         
         self.decoder = GuidedTransformerDecoder(
             dim=self.dim,
             depth=decoder_depth,
             heads=decoder_heads,
             mlp_dim=decoder_mlp_dim,
-            context_dim=self.dim # Patches are also 1024? Check embed_dim.
+            context_dim=self.dim 
         )
         # Note: If backbone embed_dim != 1024, we need projection.
-        # HMR2 (ViT-H) embed_dim is 1280. self.dim is 1024.
-        self.context_proj = nn.Linear(1280, self.dim)
+        # [Case-Tolerant]
+        in_channels = self.smpl_head_cfg.get('IN_CHANNELS', 1280) if self.smpl_head_cfg else 1280
+        self.context_proj = nn.Linear(in_channels, self.dim)
         
         # 4. Readout Heads (Per Joint)
         # Each query predicts [Rot6D (6)] + [Shape (10)] + [Cam (3)]?

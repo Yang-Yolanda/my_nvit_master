@@ -1,0 +1,30 @@
+🌐 Omega Dispatch Analysis (Ch5):
+🚀 Project: /cpfs_infra/shared/yangz/NViT-master
+🚀 Data:    /cpfs_infra/shared/yangz/NViT-master/hmr2_training_data
+🚀 Output:  /cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare
+=================================================================
+🚀 DISPATCHING: M0 (NoMask) on GPU 0
+🔹 Out: /cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare/M0_NoMask
+=================================================================
+=================================================================
+🚀 DISPATCHING: M1 (Pos16) on GPU 1
+🔹 Out: /cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare/M1_Pos16
+=================================================================
+=================================================================
+🚀 DISPATCHING: M2 (Pos24) on GPU 2
+🔹 Out: /cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare/M2_Pos24
+=================================================================
+=================================================================
+🚀 DISPATCHING: M3 (8PlusSoft) on GPU 3
+🔹 Out: /cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare/M3_8PlusSoft
+=================================================================
+=================================================================
+🚀 DISPATCHING: M4 (AdaptiveKTI) on GPU 4
+🔹 Out: /cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare/M4_AdaptiveKTI
+=================================================================
+=================================================================
+🚀 DISPATCHING: M5 (8PlusHard) on GPU 5
+🔹 Out: /cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare/M5_8PlusHard
+=================================================================
+🏁 All Group Ch5 Experiments Dispatched. Monitoring...
+✨ All experiments finished.

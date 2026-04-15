@@ -20,18 +20,32 @@ logger = logging.getLogger(__name__)
 class GuidedHMR2Module(HMR2):
     def __init__(self, cfg: CfgNode, init_renderer: bool = True):
         # ... (initialization code) ...
+        # [Case-Tolerant Setup]
+        def get_sub_cfg(c, keys):
+            for k in keys:
+                if k in c and c[k] is not None:
+                    return c[k]
+            return None
+
+        # Resolve model config (model or MODEL)
+        self.model_cfg = get_sub_cfg(cfg, ['model', 'MODEL'])
+        if self.model_cfg is None:
+             # Fallback if neither exists (should not happen in Hydra)
+             from omegaconf import DictConfig
+             self.model_cfg = DictConfig({'backbone': {}, 'smpl_head': {}})
+        
+        # Resolve backbone and smpl_head configs
+        self.backbone_cfg = get_sub_cfg(self.model_cfg, ['backbone', 'BACKBONE'])
+        self.smpl_head_cfg = get_sub_cfg(self.model_cfg, ['smpl_head', 'SMPL_HEAD'])
+
         # [Fix] HMR2 base class tries to load 'vitpose_backbone.pth'.
-        # We are inserting our own AdaptiveNViT backbone, so we disable base loading.
-        # cfg passed from Hydra is DictConfig (OmegaConf). modify in place or use safe copy if needed.
-        # simpler to just set to None if present.
-        if 'PRETRAINED_WEIGHTS' in cfg.MODEL.BACKBONE:
+        if self.backbone_cfg and 'PRETRAINED_WEIGHTS' in self.backbone_cfg:
              from omegaconf import DictConfig
              if isinstance(cfg, DictConfig):
-                 from omegaconf import open_dict
                  with open_dict(cfg):
-                     cfg.MODEL.BACKBONE.PRETRAINED_WEIGHTS = None
+                     self.backbone_cfg.PRETRAINED_WEIGHTS = None
              else:
-                 cfg.MODEL.BACKBONE.PRETRAINED_WEIGHTS = None
+                 self.backbone_cfg.PRETRAINED_WEIGHTS = None
              
         # Call super init to setup basic attributes (but we will overwrite model components)
         super().__init__(cfg, init_renderer)
@@ -39,7 +53,8 @@ class GuidedHMR2Module(HMR2):
         
         # 1. Overwrite Backbone: AdaptiveNViT (Guided Mode)
         # [NEW] Optional: Skip AdaptiveNViT for Paper 1 (Baseline + Masking) experiments
-        self.use_adaptive_nvit = cfg.MODEL.BACKBONE.get('USE_ADAPTIVE_NVIT', True)
+        # [Case-Tolerant]
+        self.use_adaptive_nvit = self.backbone_cfg.get('USE_ADAPTIVE_NVIT', True) if self.backbone_cfg else True
         
         if self.use_adaptive_nvit:
             # Using Spiral Topology (Winner of Expt 3)
@@ -47,24 +62,28 @@ class GuidedHMR2Module(HMR2):
             if hasattr(self, 'backbone'):
                 del self.backbone 
                 
-            mamba_variant = cfg.MODEL.BACKBONE.get('MAMBA_VARIANT', cfg.MODEL.BACKBONE.get('mamba_variant', 'spiral'))
-            gcn_variant = cfg.MODEL.BACKBONE.get('GCN_VARIANT', cfg.MODEL.BACKBONE.get('gcn_variant', 'guided'))
+            mamba_variant = self.backbone_cfg.get('MAMBA_VARIANT', self.backbone_cfg.get('mamba_variant', 'spiral'))
+            gcn_variant = self.backbone_cfg.get('GCN_VARIANT', self.backbone_cfg.get('gcn_variant', 'guided'))
             
             # [Ablation Support] Make depth, switch layers configurable
-            depth = cfg.MODEL.BACKBONE.get('depth', 11) # Default to target 11
-            sl1 = cfg.MODEL.BACKBONE.get('switch_layer_1', 8)
+            depth = self.backbone_cfg.get('depth', 11) # Default to target 11
+            sl1 = self.backbone_cfg.get('switch_layer_1', 8)
             # [Fix] Set switch_layer_2 default to 10 (depth-1) so HeatmapMapper triggers properly.
-            sl2 = cfg.MODEL.BACKBONE.get('switch_layer_2', 10)
+            sl2 = self.backbone_cfg.get('switch_layer_2', 10)
             
-            logger.info(f"Initializing AdaptiveNViT with Depth={depth}, Mamba={mamba_variant}, GCN={gcn_variant}, Sl1={sl1}, Sl2={sl2}")
+            # [Refactor] Use dynamic embed_dim from config to support ViT-Base (768)
+            embed_dim = self.backbone_cfg.get('embed_dim', 1280)
+            num_heads = self.backbone_cfg.get('num_heads', 16) # Base=12, Huge=16
+            
+            logger.info(f"Initializing AdaptiveNViT with Depth={depth}, EmbedDim={embed_dim}, Heads={num_heads}, Mamba={mamba_variant}, GCN={gcn_variant}")
             
             # [GEOMETRY RULE 2.2]: Enable Gradient Checkpointing for High-Batch stability
-            use_checkpoint = cfg.MODEL.BACKBONE.get('USE_CHECKPOINT', False)
+            use_checkpoint = self.backbone_cfg.get('USE_CHECKPOINT', False)
             
             self.nvit_backbone = AdaptiveNViT(
                 depth=depth, 
-                embed_dim=1280, 
-                num_heads=16, 
+                embed_dim=embed_dim, 
+                num_heads=num_heads, 
                 switch_layer_1=sl1, 
                 switch_layer_2=sl2, 
                 mamba_variant=mamba_variant, 
@@ -77,25 +96,24 @@ class GuidedHMR2Module(HMR2):
         else:
             logger.info("Using Baseline ViT Backbone (USE_ADAPTIVE_NVIT = False)")
             # [Fix] Explicitly propagate use_checkpoint to standard backbone
-            if hasattr(self, 'backbone'):
-                self.backbone.use_checkpoint = cfg.MODEL.BACKBONE.get('USE_CHECKPOINT', False)
+            if hasattr(self, 'backbone') and self.backbone_cfg:
+                self.backbone.use_checkpoint = self.backbone_cfg.get('USE_CHECKPOINT', False)
                 logger.info(f"Standard backbone use_checkpoint set to: {self.backbone.use_checkpoint}")
         
         # [CRITICAL FIX] Ensure TRANSFORMER_DECODER matches Run 9 baseline weights (3 layers, 4 heads)
         # Without this, weights are skipped due to size mismatch (768 vs 1536)
-        if 'TRANSFORMER_DECODER' not in cfg.MODEL.SMPL_HEAD:
+        # [Case-Tolerant]
+        if self.smpl_head_cfg and 'TRANSFORMER_DECODER' not in self.smpl_head_cfg:
              from omegaconf import DictConfig
              if isinstance(cfg, DictConfig):
-                 from omegaconf import open_dict
                  with open_dict(cfg):
-                     cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER = {} # Use dict, Hydra will convert or accept
+                     self.smpl_head_cfg.TRANSFORMER_DECODER = {} # Use dict, Hydra will convert or accept
              else:
-                 cfg.MODEL.SMPL_HEAD.TRANSFORMER_DECODER = CfgNode()
+                 self.smpl_head_cfg.TRANSFORMER_DECODER = CfgNode()
         
         # Override with Run 9 defaults if not explicitly set to something else
         from omegaconf import DictConfig
         if isinstance(cfg, DictConfig):
-            from omegaconf import open_dict
             ctx = open_dict(cfg)
         else:
             from contextlib import nullcontext
@@ -500,17 +518,23 @@ class GuidedHMR2Module(HMR2):
     @pl.utilities.rank_zero.rank_zero_only
     def tensorboard_logging(self, batch: dict, output: dict, step_count: int, train: bool = True, write_to_summary_writer: bool = True) -> None:
         """
-        Overriding to handle BFloat16 -> Float32 conversion for numpy/renderer.
+        Modified to log ONLY scalars (losses) and skip expensive/crash-prone mesh rendering.
         """
-        # Create shallow copies to avoid modifying originals
-        batch_f = {k: v.float() if (torch.is_tensor(v) and v.dtype == torch.bfloat16) else v for k,v in batch.items()}
-        output_f = {k: v.float() if (torch.is_tensor(v) and v.dtype == torch.bfloat16) else v for k,v in output.items()}
+        if not write_to_summary_writer or self.logger is None:
+            return
+
+        mode = 'train' if train else 'val'
+        summary_writer = self.logger.experiment
         
-        # Handle nested smpl_params
-        if 'pred_smpl_params' in output_f:
-             output_f['pred_smpl_params'] = {k: v.float() if (torch.is_tensor(v) and v.dtype == torch.bfloat16) else v for k,v in output_f['pred_smpl_params'].items()}
+        # Log all loss components
+        losses = output.get('losses', {})
+        for loss_name, val in losses.items():
+            if isinstance(val, torch.Tensor):
+                val = val.detach().item()
+            summary_writer.add_scalar(f"{mode}/{loss_name}", val, step_count)
         
-        return super().tensorboard_logging(batch_f, output_f, step_count, train, write_to_summary_writer)
+        # [Security] Skip super().tensorboard_logging() to avoid the pyrender/ValueError crash.
+        # logger.info(f"📊 Step {step_count}: Scalars logged to TensorBoard. Rendering skipped.")
 
     def training_step(self, joint_batch: dict, batch_idx: int) -> dict:
         """

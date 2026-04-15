@@ -38,6 +38,7 @@ cv2.setNumThreads(0)
 os.environ['OMP_NUM_THREADS'] = '1'
 
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -248,22 +249,43 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     logger = TensorBoardLogger(os.path.join(cfg.paths.output_dir, 'tensorboard'), name='', version='', default_hp_metric=False)
     loggers = [logger]
 
+    # Setup Checkpoint Wrapper to allow multiple ModelCheckpoint instances
+    class UniqueModelCheckpoint(ModelCheckpoint):
+        def __init__(self, *args, **kwargs):
+            self._state_key = kwargs.pop('state_key', None)
+            super().__init__(*args, **kwargs)
+        @property
+        def state_key(self) -> str:
+            return self._state_key if self._state_key else super().state_key
+
     # Setup checkpoint saving
-    # Monitor train/loss to save the best model (best.ckpt)
-    # save_top_k=1 will keep the single best model based on min train/loss
-    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+    # 1. Weights-only snapshot for every epoch (approx 2.5GB) - for archive/evaluation
+    weights_only_callback = UniqueModelCheckpoint(
+        state_key='weights',
         dirpath=os.path.join(cfg.paths.output_dir, 'checkpoints'), 
-        every_n_train_steps=cfg.GENERAL.CHECKPOINT_STEPS, 
-        save_last=True,
-        monitor='train/loss_step', # Use step-wise loss for frequent updates
-        mode='min',
-        save_top_k=1, 
-        filename='best'
+        save_weights_only=True,
+        save_top_k=-1,            # Save every epoch
+        every_n_epochs=1,
+        filename='epoch_{epoch:02d}', 
+        monitor=None,
     )
-    lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
+    
+    # 2. Master Resumption Node (approx 5GB) - contains Optimizer States for "Perfect Resume"
+    # Only keeps the single latest state to save disk space.
+    last_state_callback = UniqueModelCheckpoint(
+        state_key='last',
+        dirpath=os.path.join(cfg.paths.output_dir, 'checkpoints'), 
+        save_last=True,
+        save_top_k=0,             # We only want last.ckpt
+        monitor=None,
+    )
+
+    lr_monitor = LearningRateMonitor(logging_interval='step')
     health_monitor = SystemHealthMonitor(log_interval=30)
+    
     callbacks = [
-        checkpoint_callback, 
+        weights_only_callback, 
+        last_state_callback,
         lr_monitor,
         health_monitor,
     ]
@@ -334,21 +356,20 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         missing, unexpected = model.load_state_dict(filtered_state_dict, strict=False)
         log.info(f"Loaded weights. Missing: {len(missing)}, Unexpected: {len(unexpected)}")
 
-    # [Fix] Configure ckpt_path.
-    # - If cfg.ckpt_path is explicitly set (e.g. via run_full_ddp.sh --resume), use it.
-    # - If not set, auto-detect last.ckpt in checkpoint directory.
-    # - If nothing found, start fresh (ckpt_path=None).
+    # [Fix] Configure ckpt_path for "Perfect Resumption" (断点重训)
+    # Priority: 1. Command line explicit path | 2. Auto-detected last.ckpt | 3. Fresh start
     explicit_ckpt = cfg.get('ckpt_path', None)
     if explicit_ckpt is not None and explicit_ckpt != 'null':
+        log.info(f"Using explicitly provided checkpoint for resumption: {explicit_ckpt}")
         ckpt_path_to_use = explicit_ckpt
     else:
-        # Auto-detect last.ckpt
+        # Auto-detect last.ckpt in the output directory
         auto_last = os.path.join(cfg.paths.output_dir, 'checkpoints', 'last.ckpt')
         if os.path.isfile(auto_last):
-            log.info(f"Auto-resuming from last checkpoint: {auto_last}")
+            log.info(f"✨ Auto-resuming from Master Resumption Node: {auto_last}")
             ckpt_path_to_use = auto_last
         else:
-            log.info("No checkpoint found. Starting fresh run.")
+            log.info("No matching 'last.ckpt' found. Starting fresh run.")
             ckpt_path_to_use = None
     
     log.info(f"Trainer Max Steps: {trainer.max_steps}")
