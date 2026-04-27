@@ -1,0 +1,23 @@
+{
+  "ch6": {
+    "row_label": "NViT (Ch6 best, step=492k)",
+    "label": "composite",
+    "eval_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch6_2026-04-17_13-28-24_step_492000.json",
+    "checkpoint": "/mnt/yangz/nvit_output/ch6/train/runs/2026-04-17_13-28-24/checkpoints/step_step=492000.ckpt",
+    "params_m": 208.128
+  },
+  "output_stem": "ch6_external_vs_ch6best",
+  "rows": [
+    {
+      "kind": "external",
+      "label": "hmr2_mid_heavy",
+      "status": "skipped_pth",
+      "params_m": 0.0,
+      "checkpoint": "/cpfs_infra/shared/yangz/NViT-master/outputs/eval_global/Ch6A/mnt_nvit_mirror/ablation/hmr2_mid_heavy.pth",
+      "note": "仅 state_dict/剪枝 backbone；与默认 HMR2 全结构不一致。需同实验 config + LayerAblation 建网后再标准评测。"
+    }
+  ],
+  "source_mirror": "/cpfs_infra/shared/yangz/NViT-master/outputs/eval_global/Ch6A/mnt_nvit_mirror",
+  "source_nfs": "/mnt/yangz/nvit",
+  "log": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/logs/ch6_external_compare_20260426_171039.log"
+}

@@ -34,11 +34,11 @@ class HMR2CustomTrainingOrchestrator(SkillBase):
     def setup_configs(self):
         """Step 2: Dataset Configuration Check"""
         self.logger.info("📄 Step 2: Verifying Dataset Configuration...")
-        config_path = Path("/home/yangz/4D-Humans/hmr2/configs/datasets_tar.yaml")
+        config_path = Path(get_project_root()) / "scripts" / "datasets_tar.yaml"
         if not config_path.exists():
             self.logger.error(f"Config file not found: {config_path}")
             return False
-        self.logger.info(f"✅ Found datasets_tar.yaml")
+        self.logger.info(f"✅ Found NViT scripts/datasets_tar.yaml")
         return True
 
     def configure_code(self):

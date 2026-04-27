@@ -14,9 +14,9 @@ pkill -9 -f "train_guided.py"
 pkill -9 -f "torchrun"
 sleep 2
 
-# 2. Path Setup
-BASE_DIR="/home/yangz/NViT-master"
-export PYTHONPATH=$PYTHONPATH:$BASE_DIR:$BASE_DIR/../4D-Humans
+# 2. Path Setup (repo root = parent of nvit/)
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export PYTHONPATH=$PYTHONPATH:$PROJECT_ROOT:$PROJECT_ROOT/../4D-Humans
 
 # 3. Argument Handling (Resume Support)
 # Usage: ./run_full_ddp.sh [--resume]
@@ -65,7 +65,7 @@ torchrun --nproc_per_node=4 \
          nvit/train_guided.py experiment=hmr_vit_transformer \
          $CKPT_ARG \
          $FINETUNE_ARG \
-         ++DATASETS_CONFIG_FILE=datasets_tar.yaml \
+         ++DATASETS_CONFIG_FILE="$PROJECT_ROOT/scripts/datasets_tar.yaml" \
          ++TRAIN.BATCH_SIZE=128 \
          ++TRAIN.ACCUMULATE_GRAD_BATCHES=3 \
          ++TRAIN.GRAD_CLIP_VAL=0.5 \
@@ -73,8 +73,7 @@ torchrun --nproc_per_node=4 \
          ++GENERAL.NUM_WORKERS=2 \
          ++GENERAL.PREFETCH_FACTOR=1 \
          ++GENERAL.LOG_STEPS=100 \
-         ++GENERAL.CHECKPOINT_STEPS=1000 \
-         ++GENERAL.CHECKPOINT_SAVE_TOP_K=3 \
+         ++GENERAL.TRAIN_BATCHES_PER_EPOCH=3000 \
          ++trainer.num_sanity_val_steps=0 \
          ++MODEL.BACKBONE.depth=12 \
          ++MODEL.BACKBONE.switch_layer_1=8 \

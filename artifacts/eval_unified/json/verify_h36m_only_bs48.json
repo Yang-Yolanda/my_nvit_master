@@ -1,0 +1,22 @@
+{
+    "args": {
+        "ckpt": "/mnt/yangz/nvit_output/ch6/train/runs/2026-04-17_13-28-24/checkpoints/step_step=492000.ckpt",
+        "dataset": "H36M-VAL-P2",
+        "gpu": "0",
+        "batch_size": 48,
+        "num_workers": 8,
+        "limit_batches": null,
+        "skip_errors": true,
+        "diagnostics": false,
+        "dense_gt": true,
+        "output": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/verify_h36m_only_bs48.json",
+        "data_dir": "/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data",
+        "use_mean_alignment": true
+    },
+    "results": {
+        "H36M-VAL-P2": {
+            "mode_mpjpe": 126.07805156520891,
+            "mode_re": 72.27955607210693
+        }
+    }
+}

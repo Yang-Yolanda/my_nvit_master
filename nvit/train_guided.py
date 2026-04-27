@@ -11,7 +11,32 @@ root = pyrootutils.setup_root(
 
 import os
 import sys
-from nvit.utils.path_utils import get_humans_root, get_project_root
+
+
+def _install_safe_print_for_shared_fs() -> None:
+    """CPFS/NFS + concurrent jobs can make stdout raise OSError 22; smplx uses print() in SMPL __init__."""
+    import builtins
+
+    _orig = builtins.print
+
+    def _safe_print(*args, **kwargs):
+        try:
+            return _orig(*args, **kwargs)
+        except OSError:
+            try:
+                kw = dict(kwargs)
+                if kw.get("file") in (None, sys.stdout):
+                    kw["file"] = sys.stderr
+                return _orig(*args, **kw)
+            except OSError:
+                return None
+
+    builtins.print = _safe_print
+
+
+_install_safe_print_for_shared_fs()
+
+from nvit.utils.path_utils import get_humans_root, get_project_root, sync_cfg_paths_output_to_hydra_run
 from pathlib import Path
 
 # Add 4D-Humans and NViT-master to path
@@ -44,6 +69,7 @@ from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.plugins.environments import SLURMEnvironment
+from pytorch_lightning.utilities.rank_zero import rank_zero_only
 
 from yacs.config import CfgNode
 from hmr2.configs import dataset_config
@@ -63,6 +89,14 @@ import signal
 signal.signal(signal.SIGUSR1, signal.SIG_DFL)
 
 log = get_pylogger(__name__)
+
+# If Hydra omits GENERAL.CHECKPOINT_EVERY_N_TRAIN_STEPS, match experiment/hmr_vit_transformer.yaml (3000).
+_DEFAULT_CHECKPOINT_EVERY_N_TRAIN_STEPS = 3000
+
+
+@rank_zero_only
+def _log_unified_run_dir(path: str) -> None:
+    log.info(f"Unified run directory (checkpoints, tensorboard, configs): {path}")
 
 import time
 import psutil
@@ -88,7 +122,7 @@ class SystemHealthMonitor(pl.Callback):
                         used = total - free
                         util = used / total * 100
                         gpu_str += f" GPU{i}:{util:.1f}%({used/1024**3:.1f}GB)"
-                    except:
+                    except Exception:
                         pass
 
             # [NEW] DataLoader Diagnostic Header when RAM is high
@@ -98,14 +132,23 @@ class SystemHealthMonitor(pl.Callback):
                     dl = trainer.train_dataloader
                     # Extract workers and batch size even if wrapped
                     while hasattr(dl, 'loader'): dl = dl.loader
-                    diag_str = f" | ⚠️ [OOM-Risk] Workers:{getattr(dl, 'num_workers', 'N/A')} B:{getattr(dl, 'batch_size', 'N/A')}"
-                except:
+                    diag_str = f" | [OOM-Risk] Workers:{getattr(dl, 'num_workers', 'N/A')} B:{getattr(dl, 'batch_size', 'N/A')}"
+                except Exception:
                     pass
 
-            log.info(f"❤️ [Health] Step:{trainer.global_step} | Host CPU:{cpu_pct}% | Host RAM:{mem.percent}% ({mem.used/1024**3:.1f}GB/{mem.total/1024**3:.1f}GB){diag_str} |{gpu_str}")
-            
-            if mem.percent > 95:
-                log.error("🛑 CRITICAL Host RAM usage (>95%)! Watchdog may kill process soon.")
+            # CPFS / tee / non-TTY streams can raise OSError on write; std logging then prints a scary traceback.
+            msg = (
+                f"[Health] Step:{trainer.global_step} | Host CPU:{cpu_pct}% | "
+                f"Host RAM:{mem.percent}% ({mem.used/1024**3:.1f}GB/{mem.total/1024**3:.1f}GB){diag_str} |{gpu_str}"
+            )
+            try:
+                log.info(msg)
+                if mem.percent > 95:
+                    log.error(
+                        "CRITICAL Host RAM usage (>95%)! Watchdog may kill process soon."
+                    )
+            except OSError:
+                pass
             
             self.last_log_time = time.time()
 
@@ -171,14 +214,24 @@ def save_configs(model_cfg: CfgNode, dataset_cfg: CfgNode, rootdir: str):
 @task_wrapper
 def train(cfg: DictConfig) -> Tuple[dict, dict]:
 
+    sync_cfg_paths_output_to_hydra_run(cfg)
+    _log_unified_run_dir(str(cfg.paths.output_dir))
+
+    # dataset_tar URLS use ${DATA_ROOT}/dataset_tars/... (expand_urls -> expandvars). If unset, paths stay
+    # literal '${DATA_ROOT}/...' and WebDataset raises FileNotFoundError on every shard (looks hung).
+    if not os.environ.get("DATA_ROOT"):
+        _data_root = Path(get_project_root()) / "hmr2_training_data"
+        os.environ["DATA_ROOT"] = str(_data_root)
+        log.info(f"DATA_ROOT was unset; defaulting to {os.environ['DATA_ROOT']}")
+
     # [Hardened] Undermind Rule 1.1: Set seed for full reproducibility
     seed = cfg.get('seed', 1234)
     pl.seed_everything(seed, workers=True)
 
-    # Load dataset config
-    # [NEW] Allow overriding the dataset config file via Hydra (e.g. data.config_file)
-    # Default is 'datasets_tar.yaml'
-    ds_conf_name = cfg.get('DATASETS_CONFIG_FILE', 'datasets_tar.yaml')
+    # Load dataset config (single maintained file under NViT scripts/ unless overridden).
+    _nvit_ds = Path(get_project_root()) / "scripts" / "datasets_tar.yaml"
+    _default_ds = str(_nvit_ds) if _nvit_ds.is_file() else "datasets_tar.yaml"
+    ds_conf_name = cfg.get("DATASETS_CONFIG_FILE", _default_ds)
     dataset_cfg = dataset_config(ds_conf_name)
 
     # Save configs
@@ -198,11 +251,16 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         cfg.GENERAL = CfgNode()
     if 'LOG_STEPS' not in cfg.GENERAL:
         cfg.GENERAL.LOG_STEPS = 10
-    if 'CHECKPOINT_STEPS' not in cfg.GENERAL:
-        cfg.GENERAL.CHECKPOINT_STEPS = 1000
+    # Legacy: CHECKPOINT_STEPS used to mean both batch cap and save cadence (confusing).
+    if 'TRAIN_BATCHES_PER_EPOCH' not in cfg.GENERAL and 'CHECKPOINT_STEPS' in cfg.GENERAL:
+        cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH = cfg.GENERAL.CHECKPOINT_STEPS
+    if 'TRAIN_BATCHES_PER_EPOCH' not in cfg.GENERAL:
+        cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH = 3000
+    if 'CHECKPOINT_EVERY_N_TRAIN_STEPS' not in cfg.GENERAL:
+        cfg.GENERAL.CHECKPOINT_EVERY_N_TRAIN_STEPS = _DEFAULT_CHECKPOINT_EVERY_N_TRAIN_STEPS
     if 'CHECKPOINT_SAVE_TOP_K' not in cfg.GENERAL:
-        cfg.GENERAL.CHECKPOINT_SAVE_TOP_K = 1
-        
+        cfg.GENERAL.CHECKPOINT_SAVE_TOP_K = -1
+
     # [Fix] Override trainer log steps to static value to avoid broken interpolation
     cfg.trainer.log_every_n_steps = cfg.GENERAL.LOG_STEPS
 
@@ -291,35 +349,53 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         def state_key(self) -> str:
             return self._state_key if self._state_key else super().state_key
 
-    # Setup checkpoint saving
-    # [Optimized Checkpointing Strategy]
-    # 1. Weights-only snapshot for every epoch - for archive/evaluation (approx 1.3GB)
-    weights_only_callback = UniqueModelCheckpoint(
-        state_key='weights',
-        dirpath=os.path.join(cfg.paths.output_dir, 'checkpoints'), 
+    # Two callbacks (same step cadence):
+    # - step_{step}.ckpt: weights-only archives every CHECKPOINT_EVERY_N_TRAIN_STEPS (default 10000), ...
+    # - last.ckpt: full training state (optimizer + schedulers) for resume.
+    gen = cfg.GENERAL
+    ckpt_every = int(gen.get('CHECKPOINT_EVERY_N_TRAIN_STEPS', _DEFAULT_CHECKPOINT_EVERY_N_TRAIN_STEPS))
+    save_top_k_weights = int(gen.get('CHECKPOINT_SAVE_TOP_K', -1))
+
+    ckpt_root = os.path.join(str(cfg.paths.output_dir), 'checkpoints')
+    os.makedirs(ckpt_root, exist_ok=True)
+
+    # PL quirk: ModelCheckpoint can wrongly rely on "epoch end" when validation is off / empty; that is NOT because
+    # "you must run validation" — we disable val below. save_on_train_epoch_end=False fixes step-only saving.
+    # CH5 and CH6 both use this file; checkpoint behavior is identical (step_{step}.ckpt + last.ckpt on same cadence).
+    weights_step_callback = UniqueModelCheckpoint(
+        state_key='weights_step',
+        dirpath=ckpt_root,
         save_weights_only=True,
-        save_top_k=-1,            # Save every epoch
-        every_n_epochs=1,
-        filename='epoch_{epoch:02d}', 
+        save_top_k=save_top_k_weights,
+        every_n_train_steps=ckpt_every,
+        every_n_epochs=None,
+        filename='step_{step}',
         monitor=None,
+        save_on_train_epoch_end=False,
     )
-    
-    # 2. Master Resumption Node - contains Optimizer States for "Perfect Resume" (approx 2.5GB+)
-    # Updates 'last.ckpt' at the end of every epoch.
+
     last_state_callback = UniqueModelCheckpoint(
         state_key='last',
-        dirpath=os.path.join(cfg.paths.output_dir, 'checkpoints'), 
+        dirpath=ckpt_root,
+        save_weights_only=False,
         save_last=True,
-        save_top_k=0,             # Only keep 'last.ckpt'
-        every_n_epochs=1,
+        save_top_k=0,
+        every_n_train_steps=ckpt_every,
+        every_n_epochs=None,
         monitor=None,
+        save_on_train_epoch_end=False,
     )
+    log.info(
+        f"Checkpoints: step_{{step}}.ckpt (weights only) every {ckpt_every} steps (top_k={save_top_k_weights}); "
+        f"last.ckpt (full state) every {ckpt_every} steps."
+    )
+    log.info(f"Checkpoint directory (look here, not under log_dir root): {ckpt_root}")
 
     lr_monitor = LearningRateMonitor(logging_interval='step')
     health_monitor = SystemHealthMonitor(log_interval=30)
     
     callbacks = [
-        weights_only_callback, 
+        weights_step_callback,
         last_state_callback,
         lr_monitor,
         health_monitor,
@@ -327,30 +403,59 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     
     # Convert DictConfig to dict to allow popping
     trainer_cfg = OmegaConf.to_container(cfg.trainer, resolve=True)
-    if 'strategy' in trainer_cfg:
-        trainer_cfg.pop('strategy')
-        
-    # [Fix] Absolutely Disable Validation according to user request
+
+    # Hydra merges ++trainer.strategy=ddp with ++trainer.strategy.find_unused_parameters=True into
+    # strategy={'find_unused_parameters': True}, dropping the ddp name — Lightning then errors.
+    # Use Lightning's registered strategy strings (see pytorch_lightning.strategies.ddp).
+    _st = trainer_cfg.get("strategy")
+    if isinstance(_st, dict) and set(_st.keys()) <= {"find_unused_parameters"}:
+        _fu = bool(_st.get("find_unused_parameters", False))
+        trainer_cfg["strategy"] = (
+            "ddp_find_unused_parameters_true" if _fu else "ddp_find_unused_parameters_false"
+        )
+        log.warning(
+            "trainer.strategy was a Hydra-merged dict; normalized to %r",
+            trainer_cfg["strategy"],
+        )
+
+    # Train-only: no validation loop (no extra val dataloader work; does not affect step-based checkpoints above).
     trainer_cfg['limit_val_batches'] = 0.0
     trainer_cfg['check_val_every_n_epoch'] = None
     trainer_cfg['num_sanity_val_steps'] = 0
     
-    # [Fix] Enforce an Epoch boundary for Infinite DataLoaders
-    # The WebDataset inherently amplifies its with_epoch() counter by num_workers and num_nodes.
-    # We must enforce a hard limit on batches per epoch so epochs remain a reasonable conceptual unit.
-    if 'limit_train_batches' not in trainer_cfg and 'CHECKPOINT_STEPS' in cfg.GENERAL:
-        trainer_cfg['limit_train_batches'] = cfg.GENERAL.CHECKPOINT_STEPS
-        
+    # Iterable / WebDataset: Lightning "epoch" = limit_train_batches. Always take this from GENERAL so
+    # ++GENERAL.TRAIN_BATCHES_PER_EPOCH=3000 cannot be shadowed by a stale/empty trainer.limit_train_batches
+    # after OmegaConf.to_container(resolve=True).
+    _tbpe_run = int(cfg.GENERAL.get("TRAIN_BATCHES_PER_EPOCH", 3000))
+    trainer_cfg["limit_train_batches"] = _tbpe_run
+    log.info(
+        "Trainer limit_train_batches=%s (GENERAL.TRAIN_BATCHES_PER_EPOCH); max_steps=%s",
+        _tbpe_run,
+        trainer_cfg.get("max_steps"),
+    )
+
     # [Autonomous Mode] Dynamic Device Configuration
     if 'devices' not in trainer_cfg:
         trainer_cfg['devices'] = 1
-        
-    log.info(f"Instantiating trainer <{cfg.trainer._target_}> with {trainer_cfg['devices']} devices")
-    
-    # Determine Strategy override
+
+    num_nodes = int(trainer_cfg.get('num_nodes', 1) or 1)
+    dev = trainer_cfg['devices']
+    if isinstance(dev, (list, tuple)):
+        n_devices = len(dev)
+    else:
+        try:
+            n_devices = int(dev)
+        except (TypeError, ValueError):
+            n_devices = 1
+
+    log.info(
+        f"Instantiating trainer <{cfg.trainer._target_}> with "
+        f"num_nodes={num_nodes}, devices={trainer_cfg['devices']} (per-node GPU count={n_devices})"
+    )
+
     strategy_kwargs = {}
-    # Single-GPU Mode: Remove any DDP strategy to prevent multi-process spawning
-    if 'strategy' in trainer_cfg:
+    # Single-GPU debug: drop explicit DDP so Lightning does not spawn worker processes.
+    if num_nodes == 1 and n_devices == 1 and 'strategy' in trainer_cfg:
         trainer_cfg.pop('strategy')
 
     trainer: Trainer = hydra.utils.instantiate(
@@ -457,11 +562,15 @@ def main(cfg: DictConfig) -> Optional[float]:
             cfg.GENERAL.LOG_STEPS = 10
         if 'VAL_STEPS' not in cfg.GENERAL:
             cfg.GENERAL.VAL_STEPS = 100
-        if 'CHECKPOINT_STEPS' not in cfg.GENERAL:
-            cfg.GENERAL.CHECKPOINT_STEPS = 1000
+        if 'TRAIN_BATCHES_PER_EPOCH' not in cfg.GENERAL and 'CHECKPOINT_STEPS' in cfg.GENERAL:
+            cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH = cfg.GENERAL.CHECKPOINT_STEPS
+        if 'TRAIN_BATCHES_PER_EPOCH' not in cfg.GENERAL:
+            cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH = 3000
+        if 'CHECKPOINT_EVERY_N_TRAIN_STEPS' not in cfg.GENERAL:
+            cfg.GENERAL.CHECKPOINT_EVERY_N_TRAIN_STEPS = _DEFAULT_CHECKPOINT_EVERY_N_TRAIN_STEPS
         if 'CHECKPOINT_SAVE_TOP_K' not in cfg.GENERAL:
-            cfg.GENERAL.CHECKPOINT_SAVE_TOP_K = 1
-            
+            cfg.GENERAL.CHECKPOINT_SAVE_TOP_K = -1
+
         # [Fix] Disable config printing to avoid resolution errors in extras
         if 'extras' in cfg:
             cfg.extras.print_config = False
@@ -471,7 +580,9 @@ def main(cfg: DictConfig) -> Optional[float]:
         # [Fix] Override trainer log steps to static value
         if 'trainer' in cfg:
             cfg.trainer.log_every_n_steps = 10
-            
+
+    sync_cfg_paths_output_to_hydra_run(cfg)
+
     # Create output directory early to avoid issues with tags.log etc.
     if 'paths' in cfg and 'output_dir' in cfg.paths:
         Path(cfg.paths.output_dir).mkdir(parents=True, exist_ok=True)

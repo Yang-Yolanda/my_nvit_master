@@ -20,7 +20,7 @@ def test_training_datasets():
     print("="*60 + "\n")
     
     # Load config
-    config_path = Path("/home/yangz/4D-Humans/hmr2/configs/datasets_tar.yaml")
+    config_path = Path(get_project_root()) / "scripts" / "datasets_tar.yaml"
     with open(config_path) as f:
         config = yaml.safe_load(f)
     

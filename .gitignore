@@ -25,3 +25,6 @@ nohup.out
 .agents/
 *.tar.gz
 *.zip
+
+# Local lists from scripts/audit_h36m_eval_images.py
+artifacts/eval_unified/*_missing.txt

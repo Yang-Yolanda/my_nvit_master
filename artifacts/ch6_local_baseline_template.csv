@@ -1,0 +1,11 @@
+Method,Dataset,MPJPE_mm,PA_MPJPE_mm,KPL2
+METRO,3DPW-TEST,,,
+METRO,H36M-VAL-P2,,,
+METRO,COCO-VAL,,,
+METRO,POSETRACK-VAL,,,
+METRO,LSP-EXTENDED,,,
+Mesh Graphormer,3DPW-TEST,,,
+Mesh Graphormer,H36M-VAL-P2,,,
+Mesh Graphormer,COCO-VAL,,,
+Mesh Graphormer,POSETRACK-VAL,,,
+Mesh Graphormer,LSP-EXTENDED,,,

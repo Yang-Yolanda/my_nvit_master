@@ -1,28 +1,24 @@
 
 import argparse
-import torch
-import torch.nn as nn
-from pathlib import Path
-import sys
 import os
-from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+import sys
+from pathlib import Path
+from typing import Optional
+
+import torch
+from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path, resolve_eval_img_dir
 
 import numpy as np
 import json
 from tqdm import tqdm
-import types
 
 # Add core skills to path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from manage_experiment.skill_base import SkillBase
 
-from nvit2_models.guided_hmr2 import GuidedHMR2Module
-from hmr2.models import HMR2
-from nvit.Paper1_Diagnostics.diagnostic_core.diagnostic_engine import ViTDiagnosticLab, HMR2Wrapper
 from hmr2.datasets import create_dataset
 from hmr2.configs import dataset_eval_config
 from hmr2.utils import recursive_to, Evaluator
-from hmr2.utils.geometry import aa_to_rotmat
 
 
 class EvaluatorSkill(SkillBase):
@@ -30,25 +26,44 @@ class EvaluatorSkill(SkillBase):
         super().__init__(gpu=gpu)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    def load_model(self, ckpt_path):
+    def load_model(self, ckpt_path: str, pth_ref_ckpt: Optional[str] = None):
         self.logger.info(f"Loading Checkpoint: {ckpt_path}")
         if not os.path.exists(ckpt_path):
             raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
-            
-        from nvit.utils.model_io import load_model_from_ckpt
-        model = load_model_from_ckpt(ckpt_path, device=self.device)
+        if pth_ref_ckpt:
+            self.logger.info(
+                f"HMR2 剪枝 .pth + ref Lightning: pth={ckpt_path}  ref={pth_ref_ckpt}"
+            )
+            from nvit.utils.hmr2_pruned_pth import load_model_hmr2_pth_or_ckpt
+
+            model = load_model_hmr2_pth_or_ckpt(
+                ckpt_path, str(self.device), pth_ref_ckpt
+            )
+        else:
+            from nvit.utils.model_io import load_model_from_ckpt
+            model = load_model_from_ckpt(ckpt_path, device=self.device)
         model.eval()
         model.to(self.device)
         return model
 
     def run_eval(self, args):
-        model = self.load_model(args.ckpt)
+        pth_ref = getattr(args, "pth_ref_ckpt", None) or None
+        model = self.load_model(args.ckpt, pth_ref)
         
         # 3. Determine Datasets to test
         cfg_eval = dataset_eval_config()
         if args.dataset == 'ALL':
             # Added MPI-INF-TEST if available, though currently identified 5 core datasets
-            datasets = ['3DPW-TEST', 'H36M-VAL-P2', 'COCO-VAL', 'POSETRACK-VAL', 'LSP-EXTENDED']
+            # ALL：含 3DPW 遮挡子集（npz 已随官方 eval 包）。MPI-INF-3DHP 需自备 npz，请显式
+            # --dataset MPI-INF-3DHP-TEST,... 接入，勿默认加入以免整轮评测静默跳过。
+            datasets = [
+                "3DPW-TEST",
+                "3DPW-OCC-TEST",
+                "H36M-VAL-P2",
+                "COCO-VAL",
+                "POSETRACK-VAL",
+                "LSP-EXTENDED",
+            ]
         else:
             datasets = args.dataset.split(',')
 
@@ -66,6 +81,9 @@ class EvaluatorSkill(SkillBase):
             data_dir = getattr(args, 'data_dir', '/home/yangz/4D-Humans/hmr2_evaluation_data')
             dataset_cfg.defrost()
             dataset_cfg.DATASET_FILE = os.path.join(data_dir, os.path.basename(dataset_cfg.DATASET_FILE))
+            # Rebase IMG_DIR from datasets_eval.yaml (/home/yangz/4D-Humans/...) onto HUMANS_ROOT; optional per-dataset override via env (see resolve_eval_img_dir).
+            if hasattr(dataset_cfg, "IMG_DIR"):
+                dataset_cfg.IMG_DIR = resolve_eval_img_dir(ds_name, dataset_cfg.IMG_DIR)
             dataset_cfg.freeze()
 
             if not os.path.exists(dataset_cfg.DATASET_FILE):
@@ -150,7 +168,12 @@ class EvaluatorSkill(SkillBase):
                                 hmr2_evaluator.pelvis_ind = 0 
                         
                         # Guard the external evaluator call
-                        if ds_name in ['3DPW-TEST', 'H36M-VAL-P2'] or is_valid_3d:
+                        if ds_name in (
+                            "3DPW-TEST",
+                            "3DPW-OCC-TEST",
+                            "MPI-INF-3DHP-TEST",
+                            "H36M-VAL-P2",
+                        ) or is_valid_3d:
                             hmr2_evaluator(out, batch)
                         else:
                             # 2D Datasets usually only care about KPL2 calculated in get_metrics_dict fallback
@@ -201,7 +224,18 @@ class EvaluatorSkill(SkillBase):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Standardized NViT Evaluation Skill")
-    parser.add_argument("--ckpt", type=str, required=True)
+    parser.add_argument(
+        "--ckpt",
+        type=str,
+        required=True,
+        help="Lightning .ckpt，或与 --pth-ref-ckpt 同用时为剪枝 hmr2 *_mid_heavy 等 .pth",
+    )
+    parser.add_argument(
+        "--pth-ref-ckpt",
+        type=str,
+        default=None,
+        help="非剪枝的 HMR2 官方/多轮 Lightning 断点，用于在剪枝 .pth 上实例化同构网再 load 权重",
+    )
     parser.add_argument("--dataset", type=str, default="3DPW-TEST")
     parser.add_argument("--gpu", type=str, default="0")
     parser.add_argument("--batch_size", type=int, default=32)

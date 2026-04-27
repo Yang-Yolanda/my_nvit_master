@@ -894,7 +894,6 @@ auto_trace
 gate_layer.py
 gumbel_softmax_helper.py
 plots
-pruning_engine_general_old.py
 pruning_engine_general.py
 pruning_helper.py
 pruning_optimizer.py

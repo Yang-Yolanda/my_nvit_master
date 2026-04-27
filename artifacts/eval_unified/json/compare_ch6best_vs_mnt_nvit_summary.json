@@ -1,0 +1,22 @@
+{
+  "ch6_composite_best": {
+    "ckpt": "/mnt/yangz/nvit_output/ch6/train/runs/2026-04-17_13-28-24/checkpoints/step_step=492000.ckpt",
+    "eval_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/reverify_20260424_nvit_ch6best_3dpw_h36m.json",
+    "datasets_3d": {
+      "3DPW-TEST": {
+        "mode_mpjpe": 118.30285015495565,
+        "mode_re": 71.30897508062948
+      },
+      "H36M-VAL-P2": {
+        "mode_mpjpe": 126.07973173794704,
+        "mode_re": 72.27869698471666
+      }
+    }
+  },
+  "mnt_nvit_ablation": {
+    "pth": "/mnt/yangz/nvit/ablation/hmr2_mid_heavy.pth",
+    "status": "pending_ref_ckpt",
+    "message_zh": "hmr2_mid_heavy.pth 为剪枝后 backbone，与 4D-Humans 默认 HMR2（ViT-H 标准 MLP=5120）结构不一致，必须用训练该 pth 时同一套 hyper_parameters.cfg 的 Lightning 断点作为 HMR2_PTH_REF_CKPT，或恢复仓库中的 experiment_layer_ablation + pruner 按 mid_heavy 建网后再 load 权重。仅有 pth 无法安全评测。"
+  },
+  "message_zh": "消融侧尚无可用 eval json；已写入 Ch6 数与阻塞原因。"
+}

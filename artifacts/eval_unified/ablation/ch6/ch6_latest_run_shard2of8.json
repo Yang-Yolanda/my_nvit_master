@@ -1,0 +1,201 @@
+{
+  "group": "ch6",
+  "chapter": "ch6",
+  "run_dir": "/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44",
+  "datasets_arg": "ALL",
+  "rank_metric_3d": "mode_re",
+  "primary_dataset": "3DPW-TEST",
+  "num_checkpoints": 4,
+  "records": [
+    {
+      "step": 50000,
+      "checkpoint": "/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44/checkpoints/step_step=50000.ckpt",
+      "raw_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch6_2026-04-26_19-18-44_step_50000.json",
+      "status": "ok",
+      "results": {
+        "3DPW-TEST": {
+          "mode_mpjpe": 118.31224366619975,
+          "mode_re": 71.10298007866807
+        },
+        "3DPW-OCC-TEST": {
+          "mode_mpjpe": 110.55713055584881,
+          "mode_re": 53.415586729307435
+        },
+        "H36M-VAL-P2": {
+          "mode_mpjpe": 129.0373115352678,
+          "mode_re": 72.21338416665081
+        },
+        "COCO-VAL": {
+          "mode_kpl2": NaN
+        },
+        "POSETRACK-VAL": {
+          "mode_kpl2": NaN
+        },
+        "LSP-EXTENDED": {
+          "mode_kpl2": NaN
+        }
+      }
+    },
+    {
+      "step": 34000,
+      "checkpoint": "/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44/checkpoints/step_step=34000.ckpt",
+      "raw_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch6_2026-04-26_19-18-44_step_34000.json",
+      "status": "ok",
+      "results": {
+        "3DPW-TEST": {
+          "mode_mpjpe": 118.29455533892978,
+          "mode_re": 71.27896828531263
+        },
+        "3DPW-OCC-TEST": {
+          "mode_mpjpe": 109.95247598596521,
+          "mode_re": 52.02233154709275
+        },
+        "H36M-VAL-P2": {
+          "mode_mpjpe": 126.75328946322954,
+          "mode_re": 71.93609696415999
+        },
+        "COCO-VAL": {
+          "mode_kpl2": NaN
+        },
+        "POSETRACK-VAL": {
+          "mode_kpl2": NaN
+        },
+        "LSP-EXTENDED": {
+          "mode_kpl2": NaN
+        }
+      }
+    },
+    {
+      "step": 18000,
+      "checkpoint": "/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44/checkpoints/step_step=18000.ckpt",
+      "raw_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch6_2026-04-26_19-18-44_step_18000.json",
+      "status": "ok",
+      "results": {
+        "3DPW-TEST": {
+          "mode_mpjpe": 118.97200400513461,
+          "mode_re": 71.4807650291532
+        },
+        "3DPW-OCC-TEST": {
+          "mode_mpjpe": 110.35728506139807,
+          "mode_re": 52.54990294172957
+        },
+        "H36M-VAL-P2": {
+          "mode_mpjpe": 125.06284491006552,
+          "mode_re": 71.35258846530739
+        },
+        "COCO-VAL": {
+          "mode_kpl2": NaN
+        },
+        "POSETRACK-VAL": {
+          "mode_kpl2": NaN
+        },
+        "LSP-EXTENDED": {
+          "mode_kpl2": NaN
+        }
+      }
+    },
+    {
+      "step": 2000,
+      "checkpoint": "/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44/checkpoints/step_step=2000.ckpt",
+      "raw_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch6_2026-04-26_19-18-44_step_2000.json",
+      "status": "ok",
+      "results": {
+        "3DPW-TEST": {
+          "mode_mpjpe": 117.51251845351075,
+          "mode_re": 71.19655603341413
+        },
+        "3DPW-OCC-TEST": {
+          "mode_mpjpe": 108.67309168222788,
+          "mode_re": 52.214064417658626
+        },
+        "H36M-VAL-P2": {
+          "mode_mpjpe": 125.7754290096472,
+          "mode_re": 71.22448750256505
+        },
+        "COCO-VAL": {
+          "mode_kpl2": NaN
+        },
+        "POSETRACK-VAL": {
+          "mode_kpl2": NaN
+        },
+        "LSP-EXTENDED": {
+          "mode_kpl2": NaN
+        }
+      }
+    }
+  ],
+  "best_composite_rank_sum": {
+    "record_index": 3,
+    "rank_sum": 5,
+    "mean_rank": 1.6666666666666667,
+    "datasets_ranked": [
+      "3DPW-OCC-TEST",
+      "3DPW-TEST",
+      "H36M-VAL-P2"
+    ],
+    "per_dataset_rank": {
+      "3DPW-TEST": 2,
+      "3DPW-OCC-TEST": 2,
+      "H36M-VAL-P2": 1
+    },
+    "checkpoint": "/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44/checkpoints/step_step=2000.ckpt",
+    "step": 2000,
+    "results": {
+      "3DPW-TEST": {
+        "mode_mpjpe": 117.51251845351075,
+        "mode_re": 71.19655603341413
+      },
+      "3DPW-OCC-TEST": {
+        "mode_mpjpe": 108.67309168222788,
+        "mode_re": 52.214064417658626
+      },
+      "H36M-VAL-P2": {
+        "mode_mpjpe": 125.7754290096472,
+        "mode_re": 71.22448750256505
+      },
+      "COCO-VAL": {
+        "mode_kpl2": NaN
+      },
+      "POSETRACK-VAL": {
+        "mode_kpl2": NaN
+      },
+      "LSP-EXTENDED": {
+        "mode_kpl2": NaN
+      }
+    }
+  },
+  "best_on_primary_dataset": {
+    "step": 50000,
+    "checkpoint": "/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44/checkpoints/step_step=50000.ckpt",
+    "dataset": "3DPW-TEST",
+    "value": 71.10298007866807,
+    "results": {
+      "3DPW-TEST": {
+        "mode_mpjpe": 118.31224366619975,
+        "mode_re": 71.10298007866807
+      },
+      "3DPW-OCC-TEST": {
+        "mode_mpjpe": 110.55713055584881,
+        "mode_re": 53.415586729307435
+      },
+      "H36M-VAL-P2": {
+        "mode_mpjpe": 129.0373115352678,
+        "mode_re": 72.21338416665081
+      },
+      "COCO-VAL": {
+        "mode_kpl2": NaN
+      },
+      "POSETRACK-VAL": {
+        "mode_kpl2": NaN
+      },
+      "LSP-EXTENDED": {
+        "mode_kpl2": NaN
+      }
+    }
+  },
+  "shard": {
+    "index": 1,
+    "total": 8,
+    "note": "partial shard — composite best is for this shard only"
+  }
+}

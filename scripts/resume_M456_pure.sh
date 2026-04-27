@@ -44,7 +44,7 @@ train_method() {
 
     # Explicitly disabling mamba/gcn variant to force purely ViT
     CMD="CUDA_VISIBLE_DEVICES=$GPU_ID python nvit/train_guided.py experiment=hmr_vit_transformer data=full_ext \
-        ++DATASETS_CONFIG_FILE=datasets_full_ext.yaml \
+        ++DATASETS_CONFIG_FILE="$PROJECT_ROOT/scripts/datasets_tar.yaml" \
         ++trainer.max_epochs=5 \
         ++TRAIN.BATCH_SIZE=8 \
         ++TRAIN.ACCUMULATE_GRAD_BATCHES=8 \

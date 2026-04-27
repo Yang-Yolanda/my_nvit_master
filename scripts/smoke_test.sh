@@ -33,7 +33,7 @@ echo "🚀 Log Dir: $SMOKE_OUT"
 "$PYTHON_EXE" -u nvit/train_guided.py \
     --config-dir "$CONFIG_DIR" \
     --config-name train \
-    ++DATASETS_CONFIG_FILE=/cpfs_infra/shared/yangz/NViT-master/scripts/datasets_tar_smoke.yaml \
+    ++DATASETS_CONFIG_FILE="$PROJECT_ROOT/scripts/datasets_tar.yaml" \
     experiment=hmr_vit_transformer \
     data=mix_all \
     ++trainer.num_nodes=1 \
@@ -44,7 +44,8 @@ echo "🚀 Log Dir: $SMOKE_OUT"
     ++TRAIN.ACCUMULATE_GRAD_BATCHES=1 \
     ++GENERAL.NUM_WORKERS=4 \
     ++FREEZE_DEPTH=7 \
-    ++GENERAL.CHECKPOINT_STEPS=5 \
+    ++GENERAL.TRAIN_BATCHES_PER_EPOCH=5 \
+    ++GENERAL.CHECKPOINT_EVERY_N_TRAIN_STEPS=5 \
     ++SMPL.DATA_DIR=$SHARED_CACHE/data/ \
     ++paths.log_dir="$SMOKE_OUT" \
     ++paths.output_dir="$SMOKE_OUT" \

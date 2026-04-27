@@ -1,0 +1,33 @@
+{
+  "ch6": {
+    "row_label": "NViT (Ch6 best, step=492k)",
+    "label": "composite",
+    "eval_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch6_2026-04-17_13-28-24_step_492000.json",
+    "checkpoint": "/mnt/yangz/nvit_output/ch6/train/runs/2026-04-17_13-28-24/checkpoints/step_step=492000.ckpt",
+    "params_m": 208.128
+  },
+  "output_stem": "ch6_external_vs_ch6best",
+  "rows": [
+    {
+      "kind": "external",
+      "label": "hmr2_mid_heavy",
+      "status": "ok",
+      "eval_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/hmr2_mid_heavy_pth_manual_20260427_092609.json",
+      "params_m": 0.0,
+      "checkpoint": "/cpfs_infra/shared/yangz/NViT-master/outputs/eval_global/Ch6A/mnt_nvit_mirror/ablation/hmr2_mid_heavy.pth",
+      "source": "mnt_nvit_mirror"
+    },
+    {
+      "kind": "external",
+      "label": "epoch=35-step=1000000",
+      "status": "ok",
+      "eval_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/hmr2_multirun_epoch35_step1M.json",
+      "params_m": 0.0,
+      "checkpoint": "/cpfs_infra/shared/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt",
+      "source": "mnt_nvit_mirror"
+    }
+  ],
+  "source_mirror": "/cpfs_infra/shared/yangz/NViT-master/outputs/eval_global/Ch6A/mnt_nvit_mirror",
+  "source_nfs": "",
+  "log": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/logs/ch6_external_compare_20260427_150921.log"
+}

@@ -1,0 +1,22 @@
+{
+    "args": {
+        "ckpt": "/cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare/M5_8PlusHard/train/runs/2026-04-18_11-37-06/checkpoints/step_step=81000.ckpt",
+        "dataset": "3DPW-OCC-TEST",
+        "gpu": "0",
+        "batch_size": 16,
+        "num_workers": 4,
+        "limit_batches": null,
+        "skip_errors": true,
+        "diagnostics": false,
+        "dense_gt": true,
+        "output": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch5_M5_8PlusHard_step_81000.json",
+        "data_dir": "/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data",
+        "use_mean_alignment": true
+    },
+    "results": {
+        "3DPW-OCC-TEST": {
+            "mode_mpjpe": 347.67111309154615,
+            "mode_re": 130.10669233992294
+        }
+    }
+}

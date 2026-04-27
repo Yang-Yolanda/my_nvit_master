@@ -1,0 +1,1 @@
+# ossutil cp -r oss://kai-ego/eval_shujuji/h36m/ /cpfs_infra/shared/yangz/4D-Humans/data/h36m/ -f

@@ -1,0 +1,26 @@
+{
+    "args": {
+        "ckpt": "/cpfs_infra/shared/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt",
+        "dataset": "3DPW-TEST,H36M-VAL-P2",
+        "gpu": "0",
+        "batch_size": 32,
+        "num_workers": 8,
+        "limit_batches": null,
+        "skip_errors": true,
+        "diagnostics": false,
+        "dense_gt": true,
+        "output": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/verify_rerun_hmr2_e35_1M_3dpw_h36m_20260424.json",
+        "data_dir": "/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data",
+        "use_mean_alignment": true
+    },
+    "results": {
+        "3DPW-TEST": {
+            "mode_mpjpe": 81.28550735719604,
+            "mode_re": 54.32446094568256
+        },
+        "H36M-VAL-P2": {
+            "mode_mpjpe": 78.48088916526909,
+            "mode_re": 36.90165969697197
+        }
+    }
+}

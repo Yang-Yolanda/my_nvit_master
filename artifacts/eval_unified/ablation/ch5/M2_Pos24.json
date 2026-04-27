@@ -1,0 +1,96 @@
+{
+  "group": "M2_Pos24",
+  "chapter": "ch5",
+  "run_dir": "/mnt/yangz/nvit_output/ch5_prior_compare/M2_Pos24/train/runs/2026-04-18_11-36-42",
+  "datasets_arg": "ALL",
+  "rank_metric_3d": "mode_re",
+  "primary_dataset": "3DPW-TEST",
+  "num_checkpoints": 1,
+  "records": [
+    {
+      "step": 90000,
+      "checkpoint": "/mnt/yangz/nvit_output/ch5_prior_compare/M2_Pos24/train/runs/2026-04-18_11-36-42/checkpoints/step_step=90000.ckpt",
+      "raw_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch5_M2_Pos24_step_90000.json",
+      "status": "ok",
+      "results": {
+        "3DPW-TEST": {
+          "mode_mpjpe": 92.40936864412252,
+          "mode_re": 57.482594449423104
+        },
+        "H36M-VAL-P2": {
+          "mode_mpjpe": 55.31365741180702,
+          "mode_re": 36.03236203399342
+        },
+        "COCO-VAL": {
+          "mode_kpl2": NaN
+        },
+        "POSETRACK-VAL": {
+          "mode_kpl2": NaN
+        },
+        "LSP-EXTENDED": {
+          "mode_kpl2": NaN
+        }
+      }
+    }
+  ],
+  "best_composite_rank_sum": {
+    "record_index": 0,
+    "rank_sum": 2,
+    "mean_rank": 1.0,
+    "datasets_ranked": [
+      "3DPW-TEST",
+      "H36M-VAL-P2"
+    ],
+    "per_dataset_rank": {
+      "3DPW-TEST": 1,
+      "H36M-VAL-P2": 1
+    },
+    "checkpoint": "/mnt/yangz/nvit_output/ch5_prior_compare/M2_Pos24/train/runs/2026-04-18_11-36-42/checkpoints/step_step=90000.ckpt",
+    "step": 90000,
+    "results": {
+      "3DPW-TEST": {
+        "mode_mpjpe": 92.40936864412252,
+        "mode_re": 57.482594449423104
+      },
+      "H36M-VAL-P2": {
+        "mode_mpjpe": 55.31365741180702,
+        "mode_re": 36.03236203399342
+      },
+      "COCO-VAL": {
+        "mode_kpl2": NaN
+      },
+      "POSETRACK-VAL": {
+        "mode_kpl2": NaN
+      },
+      "LSP-EXTENDED": {
+        "mode_kpl2": NaN
+      }
+    }
+  },
+  "best_on_primary_dataset": {
+    "step": 90000,
+    "checkpoint": "/mnt/yangz/nvit_output/ch5_prior_compare/M2_Pos24/train/runs/2026-04-18_11-36-42/checkpoints/step_step=90000.ckpt",
+    "dataset": "3DPW-TEST",
+    "value": 57.482594449423104,
+    "metric_key": "mode_re",
+    "results": {
+      "3DPW-TEST": {
+        "mode_mpjpe": 92.40936864412252,
+        "mode_re": 57.482594449423104
+      },
+      "H36M-VAL-P2": {
+        "mode_mpjpe": 55.31365741180702,
+        "mode_re": 36.03236203399342
+      },
+      "COCO-VAL": {
+        "mode_kpl2": NaN
+      },
+      "POSETRACK-VAL": {
+        "mode_kpl2": NaN
+      },
+      "LSP-EXTENDED": {
+        "mode_kpl2": NaN
+      }
+    }
+  }
+}

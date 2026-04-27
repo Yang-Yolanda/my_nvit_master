@@ -51,7 +51,7 @@ def create_mixed_dataset(args, split='train'):
     if split == 'train':
         # Load datasets_tar.yaml configuration
         import yaml
-        config_path = Path("/home/yangz/4D-Humans/hmr2/configs/datasets_tar.yaml")
+        config_path = Path(get_project_root()) / "scripts" / "datasets_tar.yaml"
         
         if not config_path.exists():
             print(f"Warning: Config file {config_path} not found. Skipping WebDatasets.")

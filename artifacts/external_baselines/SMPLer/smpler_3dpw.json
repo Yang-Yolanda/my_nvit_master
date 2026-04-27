@@ -1,0 +1,19 @@
+{
+    "args": {
+        "ckpt": "/cpfs_infra/shared/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt",
+        "dataset": "3DPW-TEST",
+        "batch_size": 32,
+        "num_workers": 0,
+        "limit_batches": null,
+        "skip_errors": true,
+        "output": "/cpfs_infra/shared/yangz/NViT-master/artifacts/external_baselines/SMPLer/smpler_3dpw.json",
+        "data_dir": "/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data",
+        "use_mean_alignment": false
+    },
+    "results": {
+        "3DPW-TEST": {
+            "mode_mpjpe": 74.69695871367381,
+            "mode_re": 44.5924864357464
+        }
+    }
+}

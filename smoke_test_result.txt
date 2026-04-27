@@ -1,4 +1,0 @@
-🌐 Dynamic Context:
-🚀 Project: /cpfs_infra/shared/yangz/NViT-master
-🚀 Config:  /cpfs_infra/shared/yangz/4D-Humans/hmr2/configs_hydra
-🚀 Data:    /cpfs_infra/shared/yangz/NViT-master/hmr2_training_data

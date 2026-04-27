@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import logging
 from pathlib import Path
@@ -292,20 +293,16 @@ class CameraHMRWrapper(ModelWrapper):
         # I will load a standalone SMPL layer in this wrapper __init__.
         
         if not hasattr(self, 'smpl_layer'):
-             from smplx import SMPL
-             # User provided path: /home/yangz/.cache/4DHumans/data/smpl/SMPL_NEUTRAL.pkl
-             # smplx expects the folder containing the model files
-             smpl_path = '/home/yangz/.cache/4DHumans/data/smpl/'
-             
-             import os
-from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
+            from smplx import SMPL
+            import os
 
-             if not os.path.exists(smpl_path):
-                 # Fallback mechanisms
-                 smpl_path = '/home/yangz/NViT-master/external_models/CameraHMR/data/models/'
-             
-             self.smpl_layer = SMPL(smpl_path, gender='neutral')
-             self.smpl_layer.to(batch['img'].device)
+            # smplx expects the folder containing the model files
+            smpl_path = "/home/yangz/.cache/4DHumans/data/smpl/"
+            if not os.path.exists(smpl_path):
+                smpl_path = "/cpfs_infra/shared/yangz/NViT-master/external_models/CameraHMR/data/models/"
+
+            self.smpl_layer = SMPL(smpl_path, gender="neutral")
+            self.smpl_layer.to(batch["img"].device)
 
         # Run SMPL
         # DEBUG: Check shapes
@@ -412,7 +409,13 @@ class NLFWrapper(ModelWrapper):
 # --- End Wrapper System ---
 
 class ViTDiagnosticLab:
-    def __init__(self, model_wrapper, model_name='ViT-Model', output_root='results'):
+    def __init__(
+        self,
+        model_wrapper,
+        model_name='ViT-Model',
+        output_root='results',
+        kti_mode='edge_ratio',
+    ):
         """
         Initialize the Generic ViT Diagnostic Lab.
         Args:
@@ -516,7 +519,21 @@ class ViTDiagnosticLab:
         
         self.results = []
         self.current_mask_config = {}
-        self.layer_metrics = defaultdict(lambda: {'entropy': [], 'kmi': [], 'rank': []})
+        self.kti_mode = str(kti_mode).strip().lower()
+        if self.kti_mode not in {'edge_ratio', 'dist_corr', 'cosine'}:
+            logger.warning(f"Unknown kti_mode={kti_mode}, fallback to edge_ratio.")
+            self.kti_mode = 'edge_ratio'
+        logger.info(f"KTI mode = {self.kti_mode}")
+        self.layer_metrics = defaultdict(
+            lambda: {
+                'entropy': [],
+                'kmi': [],
+                'kmi_edge_ratio': [],
+                'kmi_dist_corr': [],
+                'rank': [],
+                'dist': [],
+            }
+        )
         
         # SMPL Adjacency (24-joint topology)
         self.smpl_adj = torch.eye(24) 
@@ -613,6 +630,61 @@ class ViTDiagnosticLab:
         else:
              weighted_dist = (attn_scores * dist).sum(dim=-1) # (B, H, N)
              return weighted_dist.mean().cpu()
+
+    @staticmethod
+    def _as_float_scalar(x):
+        if x is None:
+            return float("nan")
+        if torch.is_tensor(x):
+            return float(x.detach().float().cpu().item())
+        return float(x)
+
+    def _ensure_spatial_dist_matrix(self, N: int, ref_device):
+        """
+        Build token–token distance matrix (patch grid or fallback 1D index) for MAD.
+        Rebuild if N or device changed.
+        """
+        if (
+            hasattr(self, "dist_matrix_cache")
+            and self.dist_matrix_cache is not None
+            and hasattr(self, "dist_matrix_device")
+            and self.dist_matrix_device == ref_device
+            and int(self.dist_matrix_cache.shape[0]) == N
+        ):
+            return
+        import math
+
+        grid_h, grid_w = None, None
+        if hasattr(self, "current_feature_grid") and self.current_feature_grid is not None:
+            grid_h, grid_w = self.current_feature_grid
+        if grid_h is None:
+            grid_w = int(math.sqrt(N))
+            if grid_w * grid_w != N and grid_w * grid_w != N - 1:
+                grid_w = 14
+            grid_h = grid_w
+
+        if grid_h * grid_w == N:
+            y, x_grid = torch.meshgrid(
+                torch.arange(grid_h, device=ref_device),
+                torch.arange(grid_w, device=ref_device),
+                indexing="ij",
+            )
+            coords = torch.stack([x_grid.flatten(), y.flatten()], dim=1).float()
+        elif grid_h * grid_w == N - 1:
+            y, x_grid = torch.meshgrid(
+                torch.arange(grid_h, device=ref_device),
+                torch.arange(grid_w, device=ref_device),
+                indexing="ij",
+            )
+            coords = torch.stack([x_grid.flatten(), y.flatten()], dim=1).float()
+            cls_coord = torch.tensor([[-100.0, -100.0]], device=ref_device)
+            coords = torch.cat([cls_coord, coords], dim=0)
+        else:
+            coords = torch.arange(N, device=ref_device).float().unsqueeze(1)
+
+        dmat = torch.cdist(coords, coords)
+        self.dist_matrix_cache = dmat
+        self.dist_matrix_device = ref_device
 
 
     def calculate_physically_grounded_kti(self, attn_map, keypoints_2d, reduce="mean"):
@@ -751,11 +823,119 @@ class ViTDiagnosticLab:
         else:
             raise ValueError(f"Unknown reduce type: {reduce}")
 
-    def calculate_kti(self, attn_map, smpl_adj, reduce="mean"):
+    def _reduce_kti_scores(self, scores, reduce):
+        arr = np.array(scores, dtype=np.float32) if scores else np.zeros(1, dtype=np.float32)
+        if reduce == "none":
+            return arr
+        if reduce == "mean":
+            return float(arr.mean()) if len(arr) > 0 else 0.0
+        raise ValueError(f"Unknown reduce type: {reduce}")
+
+    def _align_attn_adj_for_kti(self, A: torch.Tensor, E: torch.Tensor):
+        """
+        令注意力矩阵 A (n_a, n_a) 与拓扑邻接 E (n_e, n_e) 可用于同一套 KTI 公式。
+        - 常见：ViT 带 CLS 时 n_a == n_e + 1，在 E 四周补 CLS 行/列（与 compute_kmi_adjacency 的 has_cls 一致）。
+        - 否则：将 A 双线性缩放到 n_e×n_e 并归一化为概率行（避免 shape 不一致时 KTI 恒为 0）。
+        """
+        n_a, n_e = A.shape[0], E.shape[0]
+        if A.shape[1] != n_a or E.shape[1] != n_e:
+            return None, None
+        if n_a == n_e:
+            return A, E
+        if n_a == n_e + 1:
+            E2 = torch.zeros((n_a, n_a), device=E.device, dtype=E.dtype)
+            E2[0, :] = 1.0
+            E2[:, 0] = 1.0
+            E2[1:, 1:] = E
+            return A, E2
+        if n_e == n_a + 1:
+            return A, E[1:, 1:]
+        if n_a > 1 and n_e > 1 and n_a <= 1024 and n_e <= 1024:
+            if not getattr(self, "_kti_align_resize_logged", False):
+                self._kti_align_resize_logged = True
+                logger.info(
+                    "KTI: attn %s vs adj %s — bilinear resize attn to match adj",
+                    (n_a, n_a),
+                    (n_e, n_e),
+                )
+            A4 = A.unsqueeze(0).unsqueeze(0)
+            A2 = F.interpolate(A4, size=(n_e, n_e), mode="bilinear", align_corners=False).squeeze(
+                0
+            ).squeeze(0)
+            A2 = A2.clamp_min(0.0)
+            s = A2.sum()
+            if s > 0:
+                A2 = A2 / s
+            return A2, E
+        return None, None
+
+    def _calculate_kti_from_adjacency(self, attn_map, reduce="mean", mode="edge_ratio"):
+        if not hasattr(self, 'current_batch_adj') or self.current_batch_adj is None:
+            return np.array([0.0], dtype=np.float32) if reduce == "none" else 0.0
+
+        attn_avg = attn_map.mean(dim=1)  # (B, N, N)
+        B = attn_avg.shape[0]
+        scores = []
+        eps = 1e-9
+
+        for b in range(B):
+            A = attn_avg[b].float()
+            E = self.current_batch_adj[b].to(A.device).float()
+            A2, E2 = self._align_attn_adj_for_kti(A, E)
+            if A2 is None or E2 is None or A2.shape != E2.shape:
+                if not getattr(self, "_kti_shape_mismatch_logged", False):
+                    self._kti_shape_mismatch_logged = True
+                    logger.warning(
+                        "KTI: could not align attn %s with adj %s; score=0 for this batch",
+                        tuple(A.shape),
+                        tuple(E.shape),
+                    )
+                scores.append(0.0)
+                continue
+            A, E = A2, E2
+
+            if mode == "edge_ratio":
+                # Fraction of attention mass placed on kinematic edges.
+                score = (A * E).sum() / (A.sum() + eps)
+                scores.append(float(score.item()))
+            elif mode == "dist_corr":
+                # Correlation between attention and topology adjacency.
+                x = A.reshape(-1)
+                y = E.reshape(-1)
+                x = x - x.mean()
+                y = y - y.mean()
+                denom = torch.sqrt((x * x).sum() * (y * y).sum()) + eps
+                corr = (x * y).sum() / denom
+                scores.append(float(corr.item()))
+            else:
+                scores.append(0.0)
+
+        return self._reduce_kti_scores(scores, reduce)
+
+    def calculate_kti(self, attn_map, smpl_adj, reduce="mean", mode_override=None):
         """
         KTI calculation wrapper.
         Delegates to physically grounded KTI if keypoints available.
         """
+        mode = (mode_override or self.kti_mode or "edge_ratio").lower()
+
+        if mode == "edge_ratio":
+            if hasattr(self, 'current_batch_adj') and self.current_batch_adj is not None:
+                return self._calculate_kti_from_adjacency(attn_map, reduce=reduce, mode="edge_ratio")
+            # Fallback: if no adjacency, return the original physically-grounded cosine route when possible.
+            if hasattr(self, 'current_keypoints') and self.current_keypoints is not None:
+                return self.calculate_physically_grounded_kti(attn_map, self.current_keypoints, reduce)
+            return np.array([0.0], dtype=np.float32) if reduce == "none" else 0.0
+
+        if mode == "dist_corr":
+            if hasattr(self, 'current_batch_adj') and self.current_batch_adj is not None:
+                return self._calculate_kti_from_adjacency(attn_map, reduce=reduce, mode="dist_corr")
+            if hasattr(self, 'current_keypoints') and self.current_keypoints is not None:
+                # No robust distance target without adjacency; degrade to cosine KTI.
+                return self.calculate_physically_grounded_kti(attn_map, self.current_keypoints, reduce)
+            return np.array([0.0], dtype=np.float32) if reduce == "none" else 0.0
+
+        # Legacy cosine mode (original implementation path)
         if hasattr(self, 'current_keypoints') and self.current_keypoints is not None:
             return self.calculate_physically_grounded_kti(attn_map, self.current_keypoints, reduce)
 
@@ -1004,16 +1184,29 @@ class ViTDiagnosticLab:
                          attn = attn_r.softmax(dim=-1)
                          
                          # Metrics
-                         if not self.model.training: 
+                         if not self.model.training:
                              if idx not in self.layer_metrics:
-                                 self.layer_metrics[idx] = {'entropy': [], 'kmi': [], 'rank': []}
+                                 self.layer_metrics[idx] = {
+                                     'entropy': [],
+                                     'kmi': [],
+                                     'kmi_edge_ratio': [],
+                                     'kmi_dist_corr': [],
+                                     'rank': [],
+                                     'dist': [],
+                                 }
                              e = self.calculate_entropy(attn)
                              self.layer_metrics[idx]['entropy'].append(e)
-                             
+
                              # KTI Calculation (Proxy)
                              k = self.calculate_kti(attn, self.smpl_adj, reduce="none")
                              self.layer_metrics[idx]['kmi'].append(k)
-                         
+                             self.layer_metrics[idx]['kmi_edge_ratio'].append(
+                                 self.calculate_kti(attn, self.smpl_adj, reduce="none", mode_override="edge_ratio")
+                             )
+                             self.layer_metrics[idx]['kmi_dist_corr'].append(
+                                 self.calculate_kti(attn, self.smpl_adj, reduce="none", mode_override="dist_corr")
+                             )
+
                          # Final Projection logic for standard ViT
                          # x = (attn @ v).transpose(1, 2).reshape(B, N, C)
                          # x = self.proj(x)
@@ -1105,6 +1298,25 @@ class ViTDiagnosticLab:
                                 # KTI (Topology)
                                 k = self.calculate_kti(pseudo_attn_h, self.smpl_adj, reduce="none")
                                 self.layer_metrics[idx]['kmi'].append(k)
+                                self.layer_metrics[idx]['kmi_edge_ratio'].append(
+                                    self.calculate_kti(
+                                        pseudo_attn_h, self.smpl_adj, reduce="none", mode_override="edge_ratio"
+                                    )
+                                )
+                                self.layer_metrics[idx]['kmi_dist_corr'].append(
+                                    self.calculate_kti(
+                                        pseudo_attn_h, self.smpl_adj, reduce="none", mode_override="dist_corr"
+                                    )
+                                )
+                                # MAD（Token 亲和伪注意力与空间距离矩阵）
+                                try:
+                                    self._ensure_spatial_dist_matrix(N, features.device)
+                                    d = self.calculate_mean_attention_distance(
+                                        pseudo_attn_h, self.dist_matrix_cache
+                                    )
+                                    self.layer_metrics[idx]["dist"].append(self._as_float_scalar(d))
+                                except Exception as ex:
+                                    logger.warning("MAD (pseudo-attn) failed at layer %s: %s", idx, ex)
                                 
                     return feat_hook
                 
@@ -1192,8 +1404,13 @@ class ViTDiagnosticLab:
                                           attn_r = attn_r + mask
                                       else:
                                           # Fallback
-                                          if idx == 0 and b == 0: # Log once per forward
-                                              logger.warning("Hard Mask Fallback: No KTI Adjacency found! Using Grid Distance.")
+                                          if idx == 0 and not getattr(
+                                              self, "_hard_mask_fallback_logged", False
+                                          ):
+                                              self._hard_mask_fallback_logged = True
+                                              logger.warning(
+                                                  "Hard Mask Fallback: No KTI Adjacency found! Using Grid Distance."
+                                              )
                                           mask = torch.zeros_like(dist)
                                           mask[dist > 3.5] = float('-inf')
                                           attn_r = attn_r + mask.unsqueeze(0).unsqueeze(0)
@@ -1218,56 +1435,53 @@ class ViTDiagnosticLab:
                              # Metrics
                              if not self.model.training:
                                  if idx not in self.layer_metrics:
-                                     self.layer_metrics[idx] = {'entropy': [], 'kmi': [], 'rank': [], 'dist': []}
-                                 
+                                     self.layer_metrics[idx] = {
+                                         'entropy': [],
+                                         'kmi': [],
+                                         'kmi_edge_ratio': [],
+                                         'kmi_dist_corr': [],
+                                         'rank': [],
+                                         'dist': [],
+                                     }
+
                                  e = self.calculate_entropy(attn)
                                  self.layer_metrics[idx]['entropy'].append(e)
-                                 
+
                                  # Attention Distance
                                  # dist matrix should exist from masking check above (or we create it if no masking?)
                                  # We need dist matrix even if masking is 'none'.
                                  if not hasattr(self, 'dist_matrix_cache'):
-                                      # Just create it if missing (copy-paste creation logic or factor out?)
-                                      # Factoring out is better but for now let's reuse if exists, else skip?
-                                      # No, user wants it. We must ensure dist_matrix exists.
-                                      pass
+                                     # Just create it if missing (copy-paste creation logic or factor out?)
+                                     # Factoring out is better but for now let's reuse if exists, else skip?
+                                     # No, user wants it. We must ensure dist_matrix exists.
+                                     pass
 
                                  # Only calculate if dist matrix exists (it is created in Masking block)
                                  # Wait, Masking block is conditional: `if idx in mask_layers...`
                                  # So if layer not masked, dist matrix might not exist!
                                  # We need to ensure dist matrix logic is global.
-                                 
-                                 # --- Lazy Init Dist Matrix (Global) ---
-                                 if (not hasattr(self, 'dist_matrix_cache') or 
-                                      self.dist_matrix_device != q.device or 
-                                      self.dist_matrix_cache.shape[-1] != N):
-                                      
-                                      import math
-                                      grid_w = int(math.sqrt(N))
-                                      if grid_w*grid_w != N and grid_w*grid_w != N-1: grid_w = 14 # Fallback
-                                      grid_h = grid_w
-                                      
-                                      if grid_h * grid_w == N:
-                                         y, x_grid = torch.meshgrid(torch.arange(grid_h), torch.arange(grid_w), indexing='ij')
-                                         coords = torch.stack([x_grid.flatten(), y.flatten()], dim=1).float()
-                                      elif grid_h * grid_w == N - 1:
-                                          y, x_grid = torch.meshgrid(torch.arange(grid_h), torch.arange(grid_w), indexing='ij')
-                                          coords = torch.stack([x_grid.flatten(), y.flatten()], dim=1).float()
-                                          cls_coord = torch.tensor([[-100., -100.]]) # Far away
-                                          coords = torch.cat([cls_coord, coords], dim=0)
-                                      else:
-                                          coords = torch.arange(N).unsqueeze(1).float()
-                                      
-                                      dist = torch.cdist(coords, coords)
-                                      self.dist_matrix_cache = dist.to(q.device)
-                                      self.dist_matrix_device = q.device
-                                 
-                                 d = self.calculate_mean_attention_distance(attn, self.dist_matrix_cache)
-                                 self.layer_metrics[idx]['dist'].append(d)
-                                 
+
+                                 # --- Dist matrix for MAD (same as lazy init) ---
+                                 try:
+                                     self._ensure_spatial_dist_matrix(N, q.device)
+                                     d = self.calculate_mean_attention_distance(
+                                         attn, self.dist_matrix_cache
+                                     )
+                                     self.layer_metrics[idx]['dist'].append(
+                                         self._as_float_scalar(d)
+                                     )
+                                 except Exception as ex:
+                                     logger.warning("MAD (ViT attention) failed at layer %s: %s", idx, ex)
+
                                  k = self.calculate_kti(attn, self.smpl_adj, reduce="none")
                                  self.layer_metrics[idx]['kmi'].append(k)
-                                 
+                                 self.layer_metrics[idx]['kmi_edge_ratio'].append(
+                                     self.calculate_kti(attn, self.smpl_adj, reduce="none", mode_override="edge_ratio")
+                                 )
+                                 self.layer_metrics[idx]['kmi_dist_corr'].append(
+                                     self.calculate_kti(attn, self.smpl_adj, reduce="none", mode_override="dist_corr")
+                                 )
+
                                  # Store Raw Attention for Visualization (Only last batch overwrites)
                                  if not hasattr(self, 'last_attention_maps'):
                                      self.last_attention_maps = {}
@@ -1467,12 +1681,17 @@ class ViTDiagnosticLab:
             # --- EXPERIMENT 3 FIX: Enforce Official Evaluator ---
             # We re-instantiate the evaluator for each group to ensure clean state and correct config.
             # keypoint_list comes from dataset_cfg (usually 14 LSP joints)
-            # pelvis_ind=39 is critical for HMR2 (Root alignment)
+            # pelvis_ind: prefer caller (e.g. 3DPW-TEST 14-keypoint list); 39 only for H36M-style 44-list.
             try:
+                _pelvis = (
+                    int(getattr(evaluator, "pelvis_ind", 39))
+                    if evaluator is not None
+                    else 39
+                )
                 evaluator = Evaluator(
                     dataset_length=int(1e8), 
                     keypoint_list=dataset_cfg.KEYPOINT_LIST, 
-                    pelvis_ind=39, 
+                    pelvis_ind=_pelvis, 
                     metrics=['mode_mpjpe', 'mode_re']
                 )
                 # logger.info(f"Initialized Official Evaluator for {group_name}")
@@ -1548,16 +1767,21 @@ class ViTDiagnosticLab:
             avg_mpjpe = metrics_dict.get('mode_mpjpe', 0.0) # Official PA-MPJPE in mm
             
             # Aggregate
-            avg_entropy = np.mean([np.mean(v['entropy']) for v in self.layer_metrics.values() if v['entropy']])
-            avg_kmi = np.mean([np.mean(v['kmi']) for v in self.layer_metrics.values() if v['kmi']]) if any(v['kmi'] for v in self.layer_metrics.values()) else 0.0
-            avg_rank = np.mean([np.mean(v['rank']) for v in self.layer_metrics.values() if v['rank']]) if any(v['rank'] for v in self.layer_metrics.values()) else 0.0
-            avg_mad = np.mean([np.mean(v['dist']) for v in self.layer_metrics.values() if v.get('dist')]) if any(v.get('dist') for v in self.layer_metrics.values()) else 0.0
+            avg_entropy = np.mean([np.mean(v['entropy']) for v in self.layer_metrics.values() if v['entropy']]) if any(v['entropy'] for v in self.layer_metrics.values()) else np.nan
+            avg_kmi = np.mean([np.mean(v['kmi']) for v in self.layer_metrics.values() if v['kmi']]) if any(v['kmi'] for v in self.layer_metrics.values()) else np.nan
+            avg_kmi_er = np.mean([np.mean(v['kmi_edge_ratio']) for v in self.layer_metrics.values() if v.get('kmi_edge_ratio')]) if any(v.get('kmi_edge_ratio') for v in self.layer_metrics.values()) else np.nan
+            avg_kmi_corr = np.mean([np.mean(v['kmi_dist_corr']) for v in self.layer_metrics.values() if v.get('kmi_dist_corr')]) if any(v.get('kmi_dist_corr') for v in self.layer_metrics.values()) else np.nan
+            avg_rank = np.mean([np.mean(v['rank']) for v in self.layer_metrics.values() if v['rank']]) if any(v['rank'] for v in self.layer_metrics.values()) else np.nan
+            avg_mad = np.mean([np.mean(v['dist']) for v in self.layer_metrics.values() if v.get('dist')]) if any(v.get('dist') for v in self.layer_metrics.values()) else np.nan
 
             row = {
                 'Group': group_name,
                 'MPJPE': avg_mpjpe, 
                 'Avg_Entropy': avg_entropy,
                 'Avg_KTI': avg_kmi,
+                'Avg_KTI_ER': avg_kmi_er,
+                'Avg_KTI_Corr': avg_kmi_corr,
+                'KTI_Mode': self.kti_mode,
                 'Avg_Rank': avg_rank,
                 'Avg_MAD': avg_mad,
                 'Mask_Type': config.get('mode', 'none'),
@@ -1583,6 +1807,8 @@ class ViTDiagnosticLab:
                 serializable_metrics[layer_idx] = {
                     'entropy': [float(x) for x in metrics['entropy']],
                     'kmi': [float(x) for x in metrics['kmi']],
+                    'kmi_edge_ratio': [float(x) for x in metrics.get('kmi_edge_ratio', [])],
+                    'kmi_dist_corr': [float(x) for x in metrics.get('kmi_dist_corr', [])],
                     'rank': [float(x) for x in metrics['rank']],
                     'dist': [float(x) for x in metrics.get('dist', [])]
                 }

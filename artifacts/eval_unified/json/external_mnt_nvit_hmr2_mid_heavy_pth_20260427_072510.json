@@ -1,0 +1,40 @@
+{
+    "args": {
+        "ckpt": "/cpfs_infra/shared/yangz/NViT-master/outputs/eval_global/Ch6A/mnt_nvit_mirror/ablation/hmr2_mid_heavy.pth",
+        "pth_ref_ckpt": "/cpfs_infra/shared/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt",
+        "dataset": "ALL",
+        "gpu": "0",
+        "batch_size": 32,
+        "num_workers": 8,
+        "limit_batches": null,
+        "skip_errors": true,
+        "diagnostics": false,
+        "dense_gt": true,
+        "output": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/external_mnt_nvit_hmr2_mid_heavy_pth_20260427_072510.json",
+        "data_dir": "/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data",
+        "use_mean_alignment": true
+    },
+    "results": {
+        "3DPW-TEST": {
+            "mode_mpjpe": 194.9454096587228,
+            "mode_re": 89.4961727034923
+        },
+        "3DPW-OCC-TEST": {
+            "mode_mpjpe": 129.66769697859482,
+            "mode_re": 57.76727666081609
+        },
+        "H36M-VAL-P2": {
+            "mode_mpjpe": 216.84851598514683,
+            "mode_re": 108.53649428178181
+        },
+        "COCO-VAL": {
+            "mode_kpl2": NaN
+        },
+        "POSETRACK-VAL": {
+            "mode_kpl2": NaN
+        },
+        "LSP-EXTENDED": {
+            "mode_kpl2": NaN
+        }
+    }
+}

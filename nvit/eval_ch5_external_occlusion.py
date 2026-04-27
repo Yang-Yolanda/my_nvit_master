@@ -6,17 +6,19 @@ import torch
 import numpy as np
 import json
 import argparse
-from pathlib import Path
+from typing import Any
 from tqdm import tqdm
 
+_PAPER1 = get_project_root() / "nvit" / "Paper1_Diagnostics"
 sys.path.insert(0, str(get_humans_root()))
-sys.path.insert(0, '/home/yangz/NViT-master/nvit/Paper1_Diagnostics')
+sys.path.insert(0, str(_PAPER1))
 
 from hmr2.models import load_hmr2, DEFAULT_CHECKPOINT
 from hmr2.configs import dataset_eval_config
 from hmr2.utils import Evaluator
 from hmr2.datasets.image_dataset import ImageDataset
-from diagnostic_core.diagnostic_engine import ViTDiagnosticLab, get_wrapper
+from diagnostic_core.diagnostic_engine import get_wrapper
+from nvit.utils.model_io import load_model_from_ckpt, patch_hmr2_config
 
 def apply_random_occlusion(img_tensor, imgnames, occlusion_ratio=0.2):
     B, C, H, W = img_tensor.shape
@@ -37,53 +39,92 @@ def apply_random_occlusion(img_tensor, imgnames, occlusion_ratio=0.2):
         
     return masked_img
 
+
+def _dataset_cfg_for_model(loaded_model) -> Any:
+    """HMR2 / GuidedHMR2: use checkpoint cfg when available."""
+    h = getattr(loaded_model, "hparams", None)
+    if h is not None:
+        c = getattr(h, "cfg", None)
+        if c is not None:
+            return patch_hmr2_config(c)
+    _, m_cfg = load_hmr2(DEFAULT_CHECKPOINT)
+    return m_cfg
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--ckpt', type=str, required=True, help="Path to checkpoint")
     parser.add_argument('--group', type=str, required=True, help='Intervention group (M0-M6)')
     parser.add_argument('--output_json', type=str, required=True, help="Output JSON path")
+    parser.add_argument(
+        "--max_samples",
+        type=int,
+        default=None,
+        help="Only use the first N samples of 3DPW-TEST (faster ablation; default: full set).",
+    )
+    parser.add_argument(
+        "--limit_batches",
+        type=int,
+        default=None,
+        help="Stop after this many dataloader batches (overrides max_samples in practice if smaller).",
+    )
     args = parser.parse_args()
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if not os.path.exists(args.ckpt):
+        print(f"Error: Checkpoint not found at {args.ckpt}", file=sys.stderr)
+        return 1
+    if args.gpu is not None and str(args.gpu).lower() not in ("none", ""):
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0")
+        dload = "cuda:0"
+    else:
+        device = torch.device("cpu")
+        dload = "cpu"
 
-    _, m_cfg = load_hmr2(DEFAULT_CHECKPOINT)
-    
+    model = load_model_from_ckpt(args.ckpt, device=dload)
+    model = model.to(device)
+    model.eval()
+    m_cfg = _dataset_cfg_for_model(model)
+
     dataset_cfg = dataset_eval_config()
     dataset_file = str(get_humans_root() / 'hmr2_evaluation_data' / '3dpw_test.npz')
     img_dir = str(resolve_data_path('3DPW'))
     
     val_ds = ImageDataset(m_cfg, dataset_file, img_dir=img_dir, train=False)
-    val_loader = torch.utils.data.DataLoader(val_ds, batch_size=16, shuffle=False, num_workers=4)
+    if args.max_samples is not None and args.max_samples < len(val_ds):
+        n = int(args.max_samples)
+        val_ds = torch.utils.data.Subset(val_ds, range(n))
 
-    if not os.path.exists(args.ckpt):
-        print(f"Error: Checkpoint not found at {args.ckpt}")
-        return
+    val_loader = torch.utils.data.DataLoader(
+        val_ds, batch_size=16, shuffle=False, num_workers=4, pin_memory=True
+    )
 
-    model, _ = load_hmr2(DEFAULT_CHECKPOINT)
-    model.load_state_dict(torch.load(args.ckpt, map_location='cpu'), strict=False)
-    model.to(device)
-    model.eval()
-
-    wrapper = get_wrapper(model, 'HMR2')
-    # Use lab to bypass any missing forward components if needed, though standard evaluator is usually enough.
-    # But since Paper 1 uses ViTDiagnosticLab to wrap it, we'll keep it to be safe.
-    lab = ViTDiagnosticLab(wrapper, model_name=f"Robust_{args.group}", track_metrics=True)
-    # lab.apply_single_intervention(args.group) -> Not needed because M0-M6 checkpoints ALREADY contain the soft/hard masks during normal forward
+    wrapper = get_wrapper(model, "HMR2")
+    # Do not use ViTDiagnosticLab here: its attention hooks assume NViT token layout and break plain ViT.
 
     results = {}
     occlusion_levels = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
 
+    eval_len = len(val_loader.dataset)
+    if args.limit_batches is not None:
+        print(
+            f"Warning: --limit_batches={args.limit_batches} limits throughput; "
+            f"MPJPE may be biased vs full-set Evaluator length={eval_len}."
+        )
+
     for occ in occlusion_levels:
-        evaluator = Evaluator(dataset_length=len(val_ds), 
+        evaluator = Evaluator(dataset_length=eval_len, 
                               keypoint_list=dataset_cfg['3DPW-TEST'].KEYPOINT_LIST, 
                               pelvis_ind=m_cfg.EXTRA.PELVIS_IND, 
                               metrics=['mode_mpjpe', 'mode_re'])
 
         print(f"Running Occlusion {occ} for {args.group}")
         with torch.no_grad():
-            for batch_idx, batch in enumerate(tqdm(val_loader)):
+            for batch_idx, batch in enumerate(tqdm(val_loader, desc=f"occ={occ}")):
+                if args.limit_batches is not None and batch_idx >= args.limit_batches:
+                    break
                 batch = wrapper.to_device(batch, device)
                 if occ > 0:
                     imgnames = batch.get('imgname', [str(batch_idx * 16 + i) for i in range(batch['img'].shape[0])])
@@ -105,9 +146,10 @@ def main():
         results[str(occ)] = {'MPJPE': mpjpe, 'PA-MPJPE': pa_mpjpe}
         print(f"[{args.group}] Occ={occ} -> MPJPE: {mpjpe:.1f}")
 
-    with open(args.output_json, 'w') as f:
+    with open(args.output_json, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=4)
     print(f"Occlusion results saved to {args.output_json}")
+    return 0
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    raise SystemExit(main() or 0)

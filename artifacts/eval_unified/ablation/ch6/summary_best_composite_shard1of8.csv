@@ -1,0 +1,2 @@
+group,primary_dataset,best_composite_step,best_composite_checkpoint,rank_sum,mean_rank,best_primary_step,best_primary_checkpoint,aggregate_json
+ch6,3DPW-TEST,20000,/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44/checkpoints/step_step=20000.ckpt,3,1.0,20000,/cpfs_infra/shared/yangz/nvit_output/ch6_phase2_unfreeze0_from80k/train/runs/2026-04-26_19-18-44/checkpoints/step_step=20000.ckpt,/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/ablation/ch6/ch6_latest_run_shard1of8.json

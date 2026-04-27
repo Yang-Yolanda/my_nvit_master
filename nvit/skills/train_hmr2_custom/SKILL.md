@@ -22,7 +22,7 @@ Every experiment conducted via this skill follows the **Standard 6-Step Process*
 
 ### Training Data
 - **Location**: `/home/yangz/NViT-master/hmr2_training_data`
-- **Configuration**: `/home/yangz/4D-Humans/hmr2/configs/datasets_tar.yaml`
+- **Configuration**: `<NViT repo>/scripts/datasets_tar.yaml` (single maintained copy)
 - **Datasets Included**:
   - MPI-INF-TRAIN-PRUNED
   - H36M-TRAIN-WMASK
@@ -30,7 +30,6 @@ Every experiment conducted via this skill follows the **Standard 6-Step Process*
   - COCO-TRAIN-2014-WMASK-PRUNED
   - AVA-TRAIN-MIDFRAMES-1FPS-WMASK
   - AIC-TRAIN-WMASK
-  - INSTA-TRAIN-WMASK
   - COCO-TRAIN-2014-VITPOSE-REPLICATE-PRUNED12
 
 ### Evaluation Data

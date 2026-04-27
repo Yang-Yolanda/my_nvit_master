@@ -58,8 +58,6 @@ def get_checkpoint(run_path):
             return str(latest), "latest_step"
     return None, None
 
-    skill.run_eval(args)
-    return args.output
 
 def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL", parent_args=None):
     """Runs the 6 standard datasets using EvaluatorSkill"""
@@ -77,7 +75,7 @@ def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL", parent_args=
     args.limit_batches = getattr(parent_args, 'limit_batches', None)
     args.skip_errors = True
     args.use_mean_alignment = True # Critical for H3.6M
-    args.data_dir = '/home/yangz/4D-Humans/hmr2_evaluation_data'
+    args.data_dir = str(get_humans_root() / "hmr2_evaluation_data")
     args.output = str(Path(output_dir) / "metrics_suite.json")
     
     skill.run_eval(args)
@@ -155,9 +153,20 @@ def run_human_suite(ckpt_path, output_dir, gpu="0", datasets="ALL", parent_args=
 #         metrics=['mode_mpjpe']
 #     )
     
-def run_diagnostics(ckpt_path, output_root, gpu="0", run_name="Diagnostics", model=None):
+def run_diagnostics(
+    ckpt_path,
+    output_root,
+    gpu="0",
+    run_name="Diagnostics",
+    model=None,
+    num_batches=20,
+    chapter="Ch5",
+    kti_mode="edge_ratio",
+):
     """Scientific Diagnostics (Entropy, Rank, KTI)"""
-    logger.info(f"🔬 Starting 4-Metric Scientific Diagnostics for Chapter [Ch5]...")
+    logger.info(
+        f"🔬 Starting 4-Metric Scientific Diagnostics (num_batches={num_batches}) for Chapter [{chapter}]..."
+    )
     
     device = torch.device(f'cuda:{gpu}')
     
@@ -173,7 +182,12 @@ def run_diagnostics(ckpt_path, output_root, gpu="0", run_name="Diagnostics", mod
     model.eval()
     
     wrapper = HMR2Wrapper(model)
-    lab = ViTDiagnosticLab(wrapper, model_name=run_name, output_root=output_root)
+    lab = ViTDiagnosticLab(
+        wrapper,
+        model_name=run_name,
+        output_root=output_root,
+        kti_mode=kti_mode,
+    )
     lab.groups = {'Control': {'mask_layers': [], 'mode': 'none'}}
     
     # 2. 加载数据集配置 (关键点！)
@@ -217,7 +231,7 @@ def run_diagnostics(ckpt_path, output_root, gpu="0", run_name="Diagnostics", mod
         metrics=['mode_mpjpe']
     )
     
-    lab.run_experiment(dataloader, evaluator, dataset_cfg)
+    lab.run_experiment(dataloader, evaluator, dataset_cfg, num_batches=num_batches)
     return str(lab.output_dir)
 
 def summarize_results(chapter, run_name, suite_json, diag_dir, output_root):
@@ -249,6 +263,9 @@ def summarize_results(chapter, run_name, suite_json, diag_dir, output_root):
             # but the full curve is preserved in the run's folder.
             if 'Avg_MAD' in df: summary['MAD'] = float(df['Avg_MAD'].iloc[-1])
             if 'Avg_KTI' in df: summary['KTI'] = float(df['Avg_KTI'].iloc[-1])
+            if 'Avg_KTI_ER' in df: summary['KTI_ER'] = float(df['Avg_KTI_ER'].iloc[-1])
+            if 'Avg_KTI_Corr' in df: summary['KTI_Corr'] = float(df['Avg_KTI_Corr'].iloc[-1])
+            if 'KTI_Mode' in df: summary['KTI_Mode'] = str(df['KTI_Mode'].iloc[-1])
             if 'Avg_Rank' in df: summary['EffectiveRank'] = float(df['Avg_Rank'].iloc[-1])
             if 'Avg_Entropy' in df: summary['Entropy'] = float(df['Avg_Entropy'].iloc[-1])
 
@@ -267,10 +284,28 @@ def main():
     parser.add_argument("--chapter", type=str, required=True, choices=['Ch4', 'Ch5', 'Ch6A', 'Ch6B'])
     parser.add_argument("--run_path", type=str, default=None, help="Path to the training run outputs")
     parser.add_argument("--checkpoint_path", type=str, default=None, help="Direct path to a .ckpt file")
+    parser.add_argument(
+        "--run_label",
+        type=str,
+        default=None,
+        help="Name for this run in summary.csv and eval_global output dir (default: basename of run_path or checkpoint_path)",
+    )
     parser.add_argument("--gpu", type=str, default="0")
-    parser.add_argument("--diag_batches", type=int, default=20)
+    parser.add_argument(
+        "--diag_batches",
+        type=int,
+        default=20,
+        help="Batches of 3DPW-TEST (bs=1) for internal metrics: entropy, MAD, KTI, effective rank.",
+    )
     parser.add_argument("--limit_batches", type=int, default=None, help="Limit number of batches per dataset for quick testing")
     parser.add_argument("--datasets", type=str, default="ALL", help="Comma-separated list of datasets or ALL")
+    parser.add_argument(
+        "--kti_mode",
+        type=str,
+        default="edge_ratio",
+        choices=["edge_ratio", "dist_corr", "cosine"],
+        help="Internal KTI metric mode for diagnostics.",
+    )
     args = parser.parse_args()
 
     # 1. Checkpoint Resolution
@@ -279,7 +314,9 @@ def main():
         logger.error("❌ Either --run_path or --checkpoint_path must be provided.")
         return
 
-    run_name = os.path.basename(effective_path)
+    run_name = args.run_label or os.path.basename(effective_path.rstrip("/"))
+    # Sanitize folder name: avoid path separators / odd chars from experiment strings
+    run_name = run_name.replace("/", "_").replace("\\", "_")
     output_root = BASE_DIR / "outputs" / "eval_global" / args.chapter / run_name
     output_root.mkdir(parents=True, exist_ok=True)
 
@@ -304,14 +341,27 @@ def main():
     diag_dir = None
     if args.chapter in ["Ch5", "Ch6A", "Ch6B"]:
         # Pass the parent of output_root so the lab creates its own subfolder (which is output_root)
-        diag_dir = run_diagnostics(ckpt_path, output_root.parent, gpu=args.gpu, run_name=run_name, model=model)
+        diag_dir = run_diagnostics(
+            ckpt_path,
+            output_root.parent,
+            gpu=args.gpu,
+            run_name=run_name,
+            model=model,
+            num_batches=args.diag_batches,
+            chapter=args.chapter,
+            kti_mode=args.kti_mode,
+        )
 
     # 4. Final Aggregation
     summarize_results(args.chapter, run_name, suite_json, diag_dir, BASE_DIR / "outputs" / "eval_global" / args.chapter)
     
     # 5. Layer-Wise Diagnostic Plotting (NViT Auto-Gen)
     from nvit.skills.evaluate_model.layer_plotter import generate_comparative_plots
-    generate_comparative_plots(args.chapter, BASE_DIR / "outputs" / "eval_global")
+    _orun = (os.environ.get("NVIT_LAYER_PLOT_ONLY_RUNS") or "").strip()
+    _only = {p.strip() for p in _orun.split(",") if p.strip()} if _orun else None
+    generate_comparative_plots(
+        args.chapter, BASE_DIR / "outputs" / "eval_global", only_runs=_only
+    )
     logger.info(f"✨ Workflow Finalized. Layer Comparison visuals generated for {args.chapter}.")
 
 if __name__ == "__main__":

@@ -1,0 +1,3 @@
+method,dataset,MPJPE_mm,PA_MPJPE_mm,checkpoint_expected,status
+SMPLer (SMPLerCH5Wrapper),3DPW-TEST,74.69695871367381,44.5924864357464,/home/yangz/external_baselines/SMPLer/pretrained/SMPLer_3dpw.pt,ok
+SMPLer (SMPLerCH5Wrapper),H36M-VAL-P2,74.25684969486973,39.65038350999022,/home/yangz/external_baselines/SMPLer/pretrained/SMPLer_h36m.pt,ok

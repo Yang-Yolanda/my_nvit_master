@@ -39,6 +39,9 @@ signal.signal(signal.SIGUSR1, signal.SIG_DFL)
 
 log = get_pylogger(__name__)
 
+# Match train_guided.py + hmr_vit_transformer.yaml (avoid importing train_guided).
+_DEFAULT_CHECKPOINT_EVERY_N_TRAIN_STEPS = 10000
+
 class GuidedDataModule(pl.LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
@@ -96,11 +99,15 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         cfg.GENERAL = CfgNode()
     if 'LOG_STEPS' not in cfg.GENERAL:
         cfg.GENERAL.LOG_STEPS = 10
-    if 'CHECKPOINT_STEPS' not in cfg.GENERAL:
-        cfg.GENERAL.CHECKPOINT_STEPS = 1000
+    if 'TRAIN_BATCHES_PER_EPOCH' not in cfg.GENERAL and 'CHECKPOINT_STEPS' in cfg.GENERAL:
+        cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH = cfg.GENERAL.CHECKPOINT_STEPS
+    if 'TRAIN_BATCHES_PER_EPOCH' not in cfg.GENERAL:
+        cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH = 3000
+    if 'CHECKPOINT_EVERY_N_TRAIN_STEPS' not in cfg.GENERAL:
+        cfg.GENERAL.CHECKPOINT_EVERY_N_TRAIN_STEPS = _DEFAULT_CHECKPOINT_EVERY_N_TRAIN_STEPS
     if 'CHECKPOINT_SAVE_TOP_K' not in cfg.GENERAL:
-        cfg.GENERAL.CHECKPOINT_SAVE_TOP_K = 1
-        
+        cfg.GENERAL.CHECKPOINT_SAVE_TOP_K = -1
+
     # [Fix] Override trainer log steps to static value to avoid broken interpolation
     cfg.trainer.log_every_n_steps = cfg.GENERAL.LOG_STEPS
 
@@ -111,16 +118,46 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     logger = TensorBoardLogger(os.path.join(cfg.paths.output_dir, 'tensorboard'), name='', version='', default_hp_metric=False)
     loggers = [logger]
 
-    # Setup checkpoint saving
-    checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        dirpath=os.path.join(cfg.paths.output_dir, 'checkpoints'), 
-        every_n_train_steps=cfg.GENERAL.CHECKPOINT_STEPS, 
+    class UniqueModelCheckpoint(pl.callbacks.ModelCheckpoint):
+        def __init__(self, *args, **kwargs):
+            self._state_key = kwargs.pop('state_key', None)
+            super().__init__(*args, **kwargs)
+
+        @property
+        def state_key(self) -> str:
+            return self._state_key if self._state_key else super().state_key
+
+    step_int = int(cfg.GENERAL.CHECKPOINT_EVERY_N_TRAIN_STEPS)
+    save_top_k_weights = int(cfg.GENERAL.CHECKPOINT_SAVE_TOP_K)
+    ckpt_root = os.path.join(str(cfg.paths.output_dir), 'checkpoints')
+    os.makedirs(ckpt_root, exist_ok=True)
+
+    weights_step_callback = UniqueModelCheckpoint(
+        state_key='weights_step',
+        dirpath=ckpt_root,
+        save_weights_only=True,
+        save_top_k=save_top_k_weights,
+        every_n_train_steps=step_int,
+        every_n_epochs=None,
+        filename='step_{step}',
+        monitor=None,
+        save_on_train_epoch_end=False,
+    )
+    last_state_callback = UniqueModelCheckpoint(
+        state_key='last',
+        dirpath=ckpt_root,
+        save_weights_only=False,
         save_last=True,
-        save_top_k=cfg.GENERAL.CHECKPOINT_SAVE_TOP_K,
+        save_top_k=0,
+        every_n_train_steps=step_int,
+        every_n_epochs=None,
+        monitor=None,
+        save_on_train_epoch_end=False,
     )
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
     callbacks = [
-        checkpoint_callback, 
+        weights_step_callback,
+        last_state_callback,
         lr_monitor,
     ]
     # [Fix] Force DDP strategy with unused params by overriding Hydra config
@@ -128,8 +165,10 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     trainer_cfg = OmegaConf.to_container(cfg.trainer, resolve=True)
     if 'strategy' in trainer_cfg:
         trainer_cfg.pop('strategy')
-    
-    
+
+    if 'limit_train_batches' not in trainer_cfg and 'TRAIN_BATCHES_PER_EPOCH' in cfg.GENERAL:
+        trainer_cfg['limit_train_batches'] = cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH
+
     # [Autonomous Mode] Dynamic Device Configuration
     # If devices not set, default to 1. If set to >1, force DDP with unused params.
     if 'devices' not in trainer_cfg:
@@ -188,11 +227,15 @@ def main(cfg: DictConfig) -> Optional[float]:
             cfg.GENERAL.LOG_STEPS = 10
         if 'VAL_STEPS' not in cfg.GENERAL:
             cfg.GENERAL.VAL_STEPS = 100
-        if 'CHECKPOINT_STEPS' not in cfg.GENERAL:
-            cfg.GENERAL.CHECKPOINT_STEPS = 1000
+        if 'TRAIN_BATCHES_PER_EPOCH' not in cfg.GENERAL and 'CHECKPOINT_STEPS' in cfg.GENERAL:
+            cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH = cfg.GENERAL.CHECKPOINT_STEPS
+        if 'TRAIN_BATCHES_PER_EPOCH' not in cfg.GENERAL:
+            cfg.GENERAL.TRAIN_BATCHES_PER_EPOCH = 3000
+        if 'CHECKPOINT_EVERY_N_TRAIN_STEPS' not in cfg.GENERAL:
+            cfg.GENERAL.CHECKPOINT_EVERY_N_TRAIN_STEPS = _DEFAULT_CHECKPOINT_EVERY_N_TRAIN_STEPS
         if 'CHECKPOINT_SAVE_TOP_K' not in cfg.GENERAL:
-            cfg.GENERAL.CHECKPOINT_SAVE_TOP_K = 1
-            
+            cfg.GENERAL.CHECKPOINT_SAVE_TOP_K = -1
+
         # [Fix] Disable config printing to avoid resolution errors in extras
         if 'extras' in cfg:
             cfg.extras.print_config = False

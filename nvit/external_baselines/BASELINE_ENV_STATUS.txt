@@ -1,0 +1,25 @@
+# METRO（MeshTransformer）+ Mesh Graphormer（MeshGraphormer）基线环境说明
+
+## 代码应放哪里
+官方仓库 clone 默认目录（与 smpler_adapter.py 同级）：
+  <NViT-master>/nvit/external_baselines/MeshTransformer
+  <NViT-master>/nvit/external_baselines/MeshGraphormer
+
+安装脚本：NViT-master/scripts/setup_metro_meshgraphormer_legacy_env.sh
+  默认 INSTALL_ROOT 已是上述 nvit/external_baselines。
+
+## Conda 虚拟环境（与 4D-humans / NViT 主环境隔离）
+默认环境名：nvit_metro_cu101（Python 3.7 + torch 1.6+cu101；旧 wheel 1.4+cu101 已下架）
+新建或重建：
+  MATPLOTLIB_VIA=pip SKIP_APEX=1 SKIP_OPENDR=1 \
+  bash scripts/setup_metro_meshgraphormer_legacy_env.sh --force
+自定义环境名：
+  BASELINE_LEGACY_ENV=你的环名 bash scripts/setup_metro_meshgraphormer_legacy_env.sh --force
+
+激活（先清 LD_LIBRARY_PATH，避免链到宿主机 Py3.12 的 torch）：
+  source scripts/activate_baseline_metro_gphmr.sh
+
+## 是否「全自动装完」
+- 已自动化：conda 环境、PyTorch/torchvision（cu101）、matplotlib（pip 轻量）、可选 opendr（无头机常失败可 SKIP_OPENDR=1）。
+- 需你本机条件：能解析 github.com 才能 git clone 两仓库；预训练权重按各仓库 docs/DOWNLOAD.md 下载。
+- 旧路径说明：若曾在仓库外 .../yangz/external_baselines 装过，可手动 mv 两个仓库目录到本 nvit/external_baselines/。

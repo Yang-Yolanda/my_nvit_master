@@ -16,6 +16,10 @@ import types
 
 # Allow importing from parent (nvit root)
 sys.path.append(str(Path(__file__).resolve().parent.parent))
+try:
+    from nvit.utils.path_utils import get_humans_root
+except Exception:
+    get_humans_root = lambda: Path(__file__).resolve().parents[3].parent / "4D-Humans"  # fallback
 sys.path.append(str(get_humans_root()))
 
 # Logic for HMR2 import 
@@ -264,7 +268,6 @@ class ViTDiagnosticLab:
 
     def export_intermediate_metrics(self, run_id, dataset_split, ckpt_name="last"):
         import os
-from nvit.utils.path_utils import get_humans_root, get_project_root, resolve_data_path
 
         import json
         import pandas as pd

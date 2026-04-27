@@ -1,0 +1,22 @@
+{
+    "args": {
+        "ckpt": "/cpfs_infra/shared/yangz/NViT-master/output/ch5_prior_compare/M2_Pos24/train/runs/2026-04-18_11-36-42/checkpoints/step_step=72000.ckpt",
+        "dataset": "3DPW-OCC-TEST",
+        "gpu": "0",
+        "batch_size": 16,
+        "num_workers": 4,
+        "limit_batches": null,
+        "skip_errors": true,
+        "diagnostics": false,
+        "dense_gt": true,
+        "output": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch5_M2_Pos24_step_72000.json",
+        "data_dir": "/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data",
+        "use_mean_alignment": true
+    },
+    "results": {
+        "3DPW-OCC-TEST": {
+            "mode_mpjpe": 105.28237832559121,
+            "mode_re": 51.86189610249287
+        }
+    }
+}

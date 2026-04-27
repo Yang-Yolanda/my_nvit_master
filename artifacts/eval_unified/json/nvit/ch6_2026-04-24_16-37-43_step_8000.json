@@ -1,0 +1,40 @@
+{
+    "args": {
+        "ckpt": "/mnt/yangz/nvit_output/ch6_phase2_unfreeze5/train/runs/2026-04-24_16-37-43/checkpoints/step_step=8000.ckpt",
+        "pth_ref_ckpt": null,
+        "dataset": "ALL",
+        "gpu": "0",
+        "batch_size": 48,
+        "num_workers": 8,
+        "limit_batches": null,
+        "skip_errors": true,
+        "diagnostics": false,
+        "dense_gt": true,
+        "output": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch6_2026-04-24_16-37-43_step_8000.json",
+        "data_dir": "/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data",
+        "use_mean_alignment": true
+    },
+    "results": {
+        "3DPW-TEST": {
+            "mode_mpjpe": 119.0753745077295,
+            "mode_re": 72.88676770943479
+        },
+        "3DPW-OCC-TEST": {
+            "mode_mpjpe": 111.03638396391997,
+            "mode_re": 51.713576755008184
+        },
+        "H36M-VAL-P2": {
+            "mode_mpjpe": 133.0293977518578,
+            "mode_re": 75.49372014640178
+        },
+        "COCO-VAL": {
+            "mode_kpl2": NaN
+        },
+        "POSETRACK-VAL": {
+            "mode_kpl2": NaN
+        },
+        "LSP-EXTENDED": {
+            "mode_kpl2": NaN
+        }
+    }
+}

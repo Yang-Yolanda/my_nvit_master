@@ -1,0 +1,19 @@
+{
+    "args": {
+        "ckpt": "/cpfs_infra/shared/yangz/.cache/4DHumans/logs/train/multiruns/hmr2/0/checkpoints/epoch=35-step=1000000.ckpt",
+        "dataset": "H36M-VAL-P2",
+        "batch_size": 32,
+        "num_workers": 0,
+        "limit_batches": null,
+        "skip_errors": true,
+        "output": "/cpfs_infra/shared/yangz/NViT-master/artifacts/external_baselines/SMPLer/smpler_h36m.json",
+        "data_dir": "/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data",
+        "use_mean_alignment": false
+    },
+    "results": {
+        "H36M-VAL-P2": {
+            "mode_mpjpe": 74.25684969486973,
+            "mode_re": 39.65038350999022
+        }
+    }
+}

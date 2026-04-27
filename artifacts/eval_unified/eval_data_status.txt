@@ -1,0 +1,37 @@
+HUMANS_ROOT=/cpfs_infra/shared/yangz/4D-Humans
+NPZ directory=/cpfs_infra/shared/yangz/4D-Humans/hmr2_evaluation_data
+
+=== 3DPW-TEST ===
+  NPZ entries=35515; IMG root=/cpfs_infra/shared/yangz/4D-Humans/data/3DPW/
+  Sample check: 48/48 first entries resolve to an existing file.
+
+=== H36M-VAL-P2 ===
+  NPZ entries=27558; IMG root=/cpfs_infra/shared/yangz/4D-Humans/data/h36m/
+  Sample check: 0/48 first entries resolve to an existing file.
+  First missing (example): S9_Directions_1.60457274_000001.jpg
+
+=== COCO-VAL ===
+  NPZ entries=4648; IMG root=/cpfs_infra/shared/yangz/4D-Humans/data/coco/
+  Sample check: 48/48 first entries resolve to an existing file.
+
+=== POSETRACK-VAL ===
+  NPZ entries=12700; IMG root=/cpfs_infra/shared/yangz/4D-Humans/data/posetrack/
+  Sample check: 0/48 first entries resolve to an existing file.
+  First missing (example): images/val/009470_mpii_test/000016.jpg
+
+=== LSP-EXTENDED ===
+  NPZ entries=9428; IMG root=/cpfs_infra/shared/yangz/4D-Humans/data/hr-lspet/image/
+  Sample check: 0/48 first entries resolve to an existing file.
+  First missing (example): im00001.png
+
+Manual steps for missing sets:
+  - H36M: register at vision.imar.ro; prepare S9/S11 per SPIN README; place crops as flat
+    filenames under .../data/h36m/ or .../data/h36m/images/ (matches h36m_val_p2.npz).
+  - PoseTrack 2018: download from posetrack.net / torrent; layout images/val/... under
+    .../data/posetrack/ (see first NPZ imgname).
+  - HR-LSPET: unzip https://datasets.d2.mpi-inf.mpg.de/hr-lspet/hr-lspet.zip so that im00001.png lives under .../data/hr-lspet/image/
+  - Training tars under NViT/hmr2_training_data/dataset_tars/h36m/ are NOT the val-P2 layout
+    (subjects S9/S11); do not symlink them as a substitute without preprocessing.
+
+HR-LSPET: target zip /cpfs_infra/shared/yangz/4D-Humans/_hr-lspet.zip (expected 2864955669 bytes)
+HR-LSPET: unzip OK (verify im*.png under data/hr-lspet/image).

@@ -1,0 +1,96 @@
+{
+  "group": "M0_NoMask",
+  "chapter": "ch5",
+  "run_dir": "/mnt/yangz/nvit_output/ch5_prior_compare/M0_NoMask/train/runs/2026-04-18_11-31-05",
+  "datasets_arg": "ALL",
+  "rank_metric_3d": "mode_re",
+  "primary_dataset": "3DPW-TEST",
+  "num_checkpoints": 1,
+  "records": [
+    {
+      "step": 90000,
+      "checkpoint": "/mnt/yangz/nvit_output/ch5_prior_compare/M0_NoMask/train/runs/2026-04-18_11-31-05/checkpoints/step_step=90000.ckpt",
+      "raw_json": "/cpfs_infra/shared/yangz/NViT-master/artifacts/eval_unified/json/nvit/ch5_M0_NoMask_step_90000.json",
+      "status": "ok",
+      "results": {
+        "3DPW-TEST": {
+          "mode_mpjpe": 96.56506622875138,
+          "mode_re": 58.8497810991049
+        },
+        "H36M-VAL-P2": {
+          "mode_mpjpe": 56.99681650395964,
+          "mode_re": 37.40461393834
+        },
+        "COCO-VAL": {
+          "mode_kpl2": NaN
+        },
+        "POSETRACK-VAL": {
+          "mode_kpl2": NaN
+        },
+        "LSP-EXTENDED": {
+          "mode_kpl2": NaN
+        }
+      }
+    }
+  ],
+  "best_composite_rank_sum": {
+    "record_index": 0,
+    "rank_sum": 2,
+    "mean_rank": 1.0,
+    "datasets_ranked": [
+      "3DPW-TEST",
+      "H36M-VAL-P2"
+    ],
+    "per_dataset_rank": {
+      "3DPW-TEST": 1,
+      "H36M-VAL-P2": 1
+    },
+    "checkpoint": "/mnt/yangz/nvit_output/ch5_prior_compare/M0_NoMask/train/runs/2026-04-18_11-31-05/checkpoints/step_step=90000.ckpt",
+    "step": 90000,
+    "results": {
+      "3DPW-TEST": {
+        "mode_mpjpe": 96.56506622875138,
+        "mode_re": 58.8497810991049
+      },
+      "H36M-VAL-P2": {
+        "mode_mpjpe": 56.99681650395964,
+        "mode_re": 37.40461393834
+      },
+      "COCO-VAL": {
+        "mode_kpl2": NaN
+      },
+      "POSETRACK-VAL": {
+        "mode_kpl2": NaN
+      },
+      "LSP-EXTENDED": {
+        "mode_kpl2": NaN
+      }
+    }
+  },
+  "best_on_primary_dataset": {
+    "step": 90000,
+    "checkpoint": "/mnt/yangz/nvit_output/ch5_prior_compare/M0_NoMask/train/runs/2026-04-18_11-31-05/checkpoints/step_step=90000.ckpt",
+    "dataset": "3DPW-TEST",
+    "value": 58.8497810991049,
+    "metric_key": "mode_re",
+    "results": {
+      "3DPW-TEST": {
+        "mode_mpjpe": 96.56506622875138,
+        "mode_re": 58.8497810991049
+      },
+      "H36M-VAL-P2": {
+        "mode_mpjpe": 56.99681650395964,
+        "mode_re": 37.40461393834
+      },
+      "COCO-VAL": {
+        "mode_kpl2": NaN
+      },
+      "POSETRACK-VAL": {
+        "mode_kpl2": NaN
+      },
+      "LSP-EXTENDED": {
+        "mode_kpl2": NaN
+      }
+    }
+  }
+}

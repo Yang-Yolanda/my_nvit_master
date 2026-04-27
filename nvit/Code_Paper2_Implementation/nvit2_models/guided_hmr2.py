@@ -279,10 +279,13 @@ class GuidedHMR2Module(HMR2):
         pred_smpl_params, pred_cam, _ = self.smpl_head(x_joints, coords)
         
         # [Security] Log Batch Diagnostics (Rank-0 Only)
-        if self.global_step % self.cfg.GENERAL.LOG_STEPS == 0:
+        # NOTE: Use _trainer, never self.trainer — the public `trainer` property RAISES RuntimeError
+        # when no Trainer is attached (getattr(self,"trainer",None) still invokes that property).
+        _tr = getattr(self, "_trainer", None)
+        if _tr is not None and self.training and (self.global_step % self.cfg.GENERAL.LOG_STEPS == 0):
             with torch.no_grad():
                 # 0. Effective Batch Size (Undermind Rule 1.1)
-                world_size = self.trainer.world_size if hasattr(self, 'trainer') else 1
+                world_size = int(_tr.world_size)
                 effective_batch = batch_size * world_size
                 if self.global_step == 0:
                     logger.info(f"🚀 [Training Start] Effective Global Batch Size: {effective_batch} ({world_size} GPUs * {batch_size})")

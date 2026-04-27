@@ -34,7 +34,7 @@ echo "🚀 Target Output Dir: $VERIFY_OUT"
     --config-dir "$CONFIG_DIR" \
     --config-name train \
     hydra.job.chdir=False \
-    ++DATASETS_CONFIG_FILE="$PROJECT_ROOT/scripts/datasets_tar_smoke.yaml" \
+    ++DATASETS_CONFIG_FILE="$PROJECT_ROOT/scripts/datasets_tar.yaml" \
     experiment=hmr_vit_transformer \
     data=mix_all \
     ++trainer.num_nodes=1 \
@@ -45,8 +45,8 @@ echo "🚀 Target Output Dir: $VERIFY_OUT"
     ++TRAIN.ACCUMULATE_GRAD_BATCHES=1 \
     ++GENERAL.NUM_WORKERS=4 \
     ++FREEZE_DEPTH=7 \
-    ++GENERAL.CHECKPOINT_STEPS=5 \
-    ++GENERAL.CHECKPOINT_SAVE_TOP_K=1 \
+    ++GENERAL.TRAIN_BATCHES_PER_EPOCH=5 \
+    ++GENERAL.CHECKPOINT_EVERY_N_TRAIN_STEPS=5 \
     ++SMPL.DATA_DIR="$SHARED_CACHE/data/" \
     ++MODEL.BACKBONE.PRETRAINED_WEIGHTS="$DATA_ROOT/vitpose_backbone.pth" \
     ++paths.log_dir="$VERIFY_OUT" \
